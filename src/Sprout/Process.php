@@ -20,13 +20,13 @@ class Process
     }
 
     /**
-     * Run the current and get command output
+     * Run the current process and get command output
      * @param callable|null $callback
-     * @return string
+     * @return int
      */
-    public function run(?callable $callback): string
+    public function run(?callable $callback = null): int
     {
-        return "";
+        return 0;
     }
 
     /**

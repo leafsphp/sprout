@@ -6,8 +6,205 @@ namespace Leaf\Sprout;
 
 class App
 {
-    public function register(Command $command)
+    protected $config = [
+        'name' => 'Leaf Sprout',
+        'version' => '1.0.0',
+        'commands' => [],
+    ];
+
+    public function __construct(array $config = [])
     {
-        // 
+        $this->config = $config;
+    }
+
+    /**
+     * Create a new command via function
+     * @param string $signature The command signature
+     * @param callable $callback The command callback
+     */
+    public function command(string $signature, callable $callback): Command
+    {
+        return $this->register((new Command())->create($signature, $callback));
+    }
+
+    /**
+     * Register a new command class
+     * @param \Leaf\Sprout\Command|array $command The command(s) to register
+     * @return \Leaf\Sprout\Command|App
+     */
+    public function register($command)
+    {
+        if (is_array($command)) {
+            foreach ($command as $cmd) {
+                $this->register($cmd);
+            }
+
+            return $this;
+        }
+
+        if (is_string($command)) {
+            $command = new $command();
+        }
+
+        $commandOptions = $this->parseCommandSignature($command->getSignature());
+
+        $command->setHelp($commandOptions['help']);
+
+        $this->config['commands'][$commandOptions['name']] = [
+            'signature' => $command->getSignature(),
+            'params' => $commandOptions['params'],
+            'arguments' => $commandOptions['arguments'],
+            'handler' => $command,
+        ];
+
+        return $command;
+    }
+
+    /**
+     * Run your sprout app
+     * @return void
+     */
+    public function run()
+    {
+        $params = [];
+        $arguments = [];
+
+        $argv = $_SERVER['argv'];
+        $commandName = $argv[1] ?? '';
+
+        if ($commandName === '') {
+            $this->renderListView();
+            return;
+        }
+
+        if (!isset($this->config['commands'][$commandName])) {
+            echo "Command not found\n";
+            return;
+        }
+
+        $command = $this->config['commands'][$commandName]['handler'];
+        $argumentNames = $this->config['commands'][$commandName]['arguments'];
+
+        foreach (array_slice($argv, 2) as $arg) {
+            $parts = explode('=', $arg);
+
+            if (count($parts) >= 2) {
+                $params[substr($parts[0], 2)] = join('=', array_slice($parts, 1));
+                continue;
+            }
+
+            if (strpos($arg, '--') === 0) {
+                $params[substr($arg, 2)] = true;
+                continue;
+            }
+
+            while (null !== ($part = array_shift($argumentNames))) {
+                $part = str_replace(['{', '}'], '', $part);
+
+                $arguments[$part] = $arg;
+
+                break;
+            }
+        }
+
+        $command->setParams($params);
+        $command->setArguments($arguments);
+
+        if (in_array('--help', $argv)) {
+            $this->renderHelpView($command);
+
+            return;
+        }
+
+        return $command->call($command);
+    }
+
+    protected function parseCommandSignature(string $signature)
+    {
+        if (!preg_match('/^([\w:]+)(.*?)(\{\s*--.*\})?$/', $signature, $matches)) {
+            return null;
+        }
+
+        $name = trim($matches[1]);
+        preg_match_all('/\{[^{}]+\}/', $matches[2] ?? '', $arguments);
+        preg_match_all('/\{--[^{}]+\}/', $matches[3] ?? '', $params);
+
+        $params = $this->parseSignatureTokens($params[0]);
+        $arguments = $this->parseSignatureTokens($arguments[0]);
+
+        return [
+            'name' => $name,
+            'params' => array_keys($params),
+            'arguments' => array_keys($arguments),
+            'help' => [
+                'params' => $params,
+                'arguments' => $arguments,
+            ],
+        ];
+    }
+
+    protected function parseSignatureTokens(array $input)
+    {
+        $return = [];
+
+        foreach ($input as $token) {
+            $data = explode(':', str_replace(['{', '}'], '', $token));
+            $tokenName = trim($data[0]);
+            $tokenDescription = trim($data[1] ?? '');
+
+            $return[$tokenName] = $tokenDescription;
+        }
+
+        return $return;
+    }
+
+    protected function renderListView()
+    {
+        echo <<<HELP
+{$this->config['name']} {$this->config['version']}
+
+Usage:
+  command [options] [arguments]
+
+Options:
+  -h, --help  -  Display help for the given command.
+  -q, --quiet  -  Do not output any message
+  -V, --version  -  Display this application version
+
+Available commands:
+  list: List commands
+ app
+  app:down  -  Place app in maintainance mode
+
+HELP;
+    }
+
+    protected function renderHelpView(Command $command)
+    {
+        $paramsHelp = '';
+        $argumentsHelp = '';
+
+        foreach ($command->getHelp()['arguments'] as $helpKey => $helpValue) {
+            $argumentsHelp .= "  $helpKey: $helpValue\n";
+        }
+
+        foreach ($command->getHelp()['params'] as $helpKey => $helpValue) {
+            $paramsHelp .= "  $helpKey: $helpValue\n";
+        }
+
+        echo <<<HELP
+Description:
+  {$command->getDescription()}
+
+Usage:
+  {$command->getName()} [options] [--] [<packages>...]
+
+Arguments:
+$argumentsHelp
+Options:
+  -h, --help: Display help for the given command.
+$paramsHelp
+
+HELP;
     }
 }

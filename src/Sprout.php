@@ -25,11 +25,12 @@ class Sprout
 {
     /**
      * Create a new Sprout App
+     * @param array $config Application config
      * @return App
      */
-    public function createApp(): App
+    public function createApp($config = []): App
     {
-        return (new App());
+        return (new App($config));
     }
 
     /**
@@ -78,5 +79,15 @@ class Sprout
     public function npm(string $packageManager = 'npm'): Npm
     {
         return new Npm($packageManager);
+    }
+
+    /**
+     * Create a new process and immediately run it
+     * @param string $command The command to run
+     * @return int
+     */
+    public function run(string $command): int
+    {
+        return $this->process($command)->run();
     }
 }

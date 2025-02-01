@@ -14,6 +14,15 @@ class Composer
     }
 
     /**
+     * Check if dependencies have been installed
+     * @return bool
+     */
+    public function hasDependencies(): bool
+    {
+        return false;
+    }
+
+    /**
      * Check if an CWD has a composer package installed
      * @param string|array $package The package to check for
      */
