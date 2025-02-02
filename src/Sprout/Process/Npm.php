@@ -20,6 +20,24 @@ class Npm
     }
 
     /**
+     * Return the composer.json file in cwd
+     * @return array
+     */
+    public function json(): array
+    {
+        return [];
+    }
+
+    /**
+     * Check if dependencies have been installed
+     * @return bool
+     */
+    public function hasDependencies(): bool
+    {
+        return false;
+    }
+
+    /**
      * Check if an CWD has an npm package installed
      * @param string|array $package The package to check for
      */

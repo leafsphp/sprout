@@ -8,9 +8,45 @@ use Leaf\Sprout\Process;
 
 class Composer
 {
-    public function __construct()
+    public function __construct(bool $global = false)
     {
         // 
+    }
+
+    /**
+     * Return the composer.json file in cwd
+     * @return array
+     */
+    public function json(): array
+    {
+        $composerJson = getcwd() . '/composer.json';
+
+        if (!file_exists($composerJson)) {
+            return [];
+        }
+
+        return json_decode(
+            file_get_contents($composerJson),
+            true
+        );
+    }
+
+    /**
+     * Return the composer.lock file in cwd
+     * @return array
+     */
+    public function lock(): array
+    {
+        $composerLock = getcwd() . '/composer.lock';
+
+        if (!file_exists($composerLock)) {
+            return [];
+        }
+
+        return json_decode(
+            file_get_contents($composerLock),
+            true
+        );
     }
 
     /**
@@ -19,7 +55,7 @@ class Composer
      */
     public function hasDependencies(): bool
     {
-        return false;
+        return file_exists(getcwd() . '/vendor') && file_exists(getcwd() . '/composer.lock');
     }
 
     /**
@@ -28,7 +64,7 @@ class Composer
      */
     public function hasDependency($package): bool
     {
-        return false;
+        return $this->hasDependencies() && (strpos(json_encode($this->lock()), "\"name\": \"$package\"") !== false);
     }
 
     /**
