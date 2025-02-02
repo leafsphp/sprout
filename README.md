@@ -2,7 +2,7 @@
 
 🌱 Fast, lightweight and minimal CLI framework for PHP. It provides a type-safe, feature-rich environment to build CLI apps of all sizes, plus a ton of helpers for building amazing experiences for users interacting with your CLI app.
 
-- Dependency-free, not based on any Laravel or Symfony components
+- Not based on any Laravel or Symfony console components
 - First-class support for Leaf & Leaf modules
 - Comes with built in styling, input handling, output handling, and more
 - Support for PHP 7.4 and above
