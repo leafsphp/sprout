@@ -64,6 +64,16 @@ class Command
     }
 
     /**
+     * Write output to console with a new line
+     * @param string $data
+     * @return void
+     */
+    public function writeln(string $data)
+    {
+        $this->write($data . PHP_EOL);
+    }
+
+    /**
      * Create a new command from function
      * @param string $signature
      * @param callable $handler
@@ -132,7 +142,7 @@ class Command
      */
     public function getName()
     {
-        return explode(' ', $this->signature)[0];
+        return trim(explode(' ', $this->signature)[0]);
     }
 
     /**
@@ -166,6 +176,28 @@ class Command
 
     public function call(Command $command): int
     {
+        // verify correct flags and arguments before actually calling handler
+        $arguments = $this->help['arguments'];
+        $params = $this->help['params'];
+
+        foreach ($arguments as $key => $value) {
+            if (!$value['optional'] && !isset($this->arguments[$key])) {
+                throw new \Exception("Argument $key is required");
+            }
+        }
+
+        // foreach ($arguments as $key => $value) {
+        //     if (!$value['optional'] && !isset($this->arguments[$value['long']])) {
+        //         echo "Argument {$value['long']} is required";
+        //         die();
+        //     }
+        // }
+
+        // echo json_encode($arguments, JSON_PRETTY_PRINT);
+        // echo json_encode($params, JSON_PRETTY_PRINT);
+
+        // die();`
+
         return $this->handler
             ? call_user_func($this->handler, $command)
             : $this->handle($command);

@@ -121,7 +121,7 @@ class App
 
     protected function parseCommandSignature(string $signature)
     {
-        if (!preg_match('/^([\w:]+)(.*?)(\{\s*--.*\})?$/', $signature, $matches)) {
+        if (!preg_match('/^([\w:]+)(.*?)((?:\{\s*--.*\})+)?$/s', $signature, $matches)) {
             return null;
         }
 
@@ -148,11 +148,54 @@ class App
         $return = [];
 
         foreach ($input as $token) {
-            $data = explode(':', str_replace(['{', '}'], '', $token));
-            $tokenName = trim($data[0]);
-            $tokenDescription = trim($data[1] ?? '');
+            $parsed = [
+                'long' => null,
+                'short' => null,
+                'default' => null,
+                'type' => 'string',
+                'optional' => false,
+                'description' => null,
+                'requiresValue' => false,
+            ];
 
-            $return[$tokenName] = $tokenDescription;
+            $data = explode(':', str_replace(['{', '}'], '', $token));
+
+            $tokenName = trim($data[0]);
+            $parsed['description'] = trim($data[1] ?? '');
+
+            if (strpos($tokenName, '=') !== false) {
+                $parts = explode('=', $tokenName);
+
+                if (!isset($parts[1])) {
+                    $parsed['requiresValue'] = true;
+                } else {
+                    $parsed['default'] = trim($parts[1]);
+                }
+
+                $parsed['optional'] = true;
+                $tokenName = trim($parts[0]);
+            }
+
+            if (substr($tokenName, -1) === '*') {
+                $parsed['type'] = 'array';
+                $tokenName = rtrim($tokenName, '*');
+            }
+
+            if (substr($tokenName, -1) === '?') {
+                $parsed['optional'] = true;
+                $tokenName = rtrim($tokenName, '?');
+            }
+
+            if (strpos($tokenName, '--') === 0 && strpos($tokenName, '|') !== false) {
+                $tokenName = trim($tokenName, '--');
+
+                $parts = explode('|', $tokenName);
+
+                $parsed['short'] = $parts[0];
+                $parsed['long'] = $parts[1];
+            }
+
+            $return[$tokenName] = $parsed;
         }
 
         return $return;
@@ -185,11 +228,11 @@ HELP;
         $argumentsHelp = '';
 
         foreach ($command->getHelp()['arguments'] as $helpKey => $helpValue) {
-            $argumentsHelp .= "  $helpKey: $helpValue\n";
+            $argumentsHelp .= "  $helpKey: {$helpValue['description']}\n";
         }
 
         foreach ($command->getHelp()['params'] as $helpKey => $helpValue) {
-            $paramsHelp .= "  $helpKey: $helpValue\n";
+            $paramsHelp .= "  $helpKey: {$helpValue['description']}\n";
         }
 
         echo <<<HELP

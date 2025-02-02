@@ -66,9 +66,9 @@ class Sprout
      * Run a composer process
      * @return Composer
      */
-    public function composer(): Composer
+    public function composer(bool $global = false): Composer
     {
-        return new Composer();
+        return new Composer($global);
     }
 
     /**
