@@ -8,9 +8,11 @@ use Leaf\Sprout\Process;
 
 class Composer
 {
+    protected $global = false;
+
     public function __construct(bool $global = false)
     {
-        // 
+        $this->global = $global;
     }
 
     /**
@@ -74,7 +76,8 @@ class Composer
      */
     public function install($package = null, $callback = null): Process
     {
-        $process = new Process($package ? "composer require $package" : "composer install");
+        $installCommand = $this->global ? 'global require' : 'require';
+        $process = new Process($package ? "composer $installCommand $package" : "composer install");
         $process->run($callback);
 
         return $process;
@@ -87,7 +90,8 @@ class Composer
      */
     public function remove($package, $callback = null): Process
     {
-        $process = new Process("composer remove $package");
+        $removeCommand = $this->global ? 'global remove' : 'remove';
+        $process = new Process("composer $removeCommand $package");
         $process->run($callback);
 
         return $process;

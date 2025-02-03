@@ -25,7 +25,34 @@ class Npm
      */
     public function json(): array
     {
-        return [];
+        $packageJson = getcwd() . '/package.json';
+
+        if (!file_exists($packageJson)) {
+            return [];
+        }
+
+        return json_decode(
+            file_get_contents($packageJson),
+            true
+        );
+    }
+
+    /**
+     * Return the package-lock.json file in cwd
+     * @return array
+     */
+    public function lock(): array
+    {
+        $packageLock = getcwd() . '/package-lock.json';
+
+        if (!file_exists($packageLock)) {
+            return [];
+        }
+
+        return json_decode(
+            file_get_contents($packageLock),
+            true
+        );
     }
 
     /**
@@ -34,7 +61,7 @@ class Npm
      */
     public function hasDependencies(): bool
     {
-        return false;
+        return file_exists(getcwd() . '/node_modules') && file_exists(getcwd() . '/package-lock.json');
     }
 
     /**
@@ -43,7 +70,7 @@ class Npm
      */
     public function hasDependency($package): bool
     {
-        return false;
+        return !!array_key_exists("node_modules/$package", $this->lock()['packages']);
     }
 
     /**
@@ -53,7 +80,7 @@ class Npm
      */
     public function install($package = null, $callback = null): Process
     {
-        $process = new Process("{$this->packageManager} install $package");
+        $process = new Process("{$this->packageManager} add $package");
         $process->run($callback);
 
         return $process;
