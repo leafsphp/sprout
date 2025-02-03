@@ -29,7 +29,7 @@ class App
 
     /**
      * Register a new command class
-     * @param \Leaf\Sprout\Command|array $command The command(s) to register
+     * @param \Leaf\Sprout\Command|string|array $command The command(s) to register
      * @return \Leaf\Sprout\Command|App
      */
     public function register($command)
@@ -69,7 +69,7 @@ class App
         $params = [];
         $arguments = [];
 
-        $argv = $_SERVER['argv'];
+        $argv = (array) $_SERVER['argv'];
         $commandName = $argv[1] ?? '';
 
         if ($commandName === '') {
@@ -88,13 +88,23 @@ class App
         foreach (array_slice($argv, 2) as $arg) {
             $parts = explode('=', $arg);
 
+            if (strpos($parts[0], '-') === 0 && strpos($parts[0], '--') === false) {
+                $paramName = array_filter($command->getHelp()['params'], function ($param) use ($parts) {
+                    return $param['short'] === ltrim($parts[0], '-');
+                });
+
+                if (!empty($paramName)) {
+                    $parts[0] = '--' . (array_values($paramName)[0]['long']);
+                }
+            }
+
             if (count($parts) >= 2) {
                 $params[substr($parts[0], 2)] = join('=', array_slice($parts, 1));
                 continue;
             }
 
-            if (strpos($arg, '--') === 0) {
-                $params[substr($arg, 2)] = true;
+            if (strpos($parts[0], '--') === 0) {
+                $params[substr($parts[0], 2)] = true;
                 continue;
             }
 
@@ -186,13 +196,17 @@ class App
                 $tokenName = rtrim($tokenName, '?');
             }
 
-            if (strpos($tokenName, '--') === 0 && strpos($tokenName, '|') !== false) {
+            if (strpos($tokenName, '--') === 0) {
                 $tokenName = trim($tokenName, '--');
 
                 $parts = explode('|', $tokenName);
 
-                $parsed['short'] = $parts[0];
-                $parsed['long'] = $parts[1];
+                if (count($parts) === 2) {
+                    $parsed['long'] = $parts[1];
+                    $parsed['short'] = $parts[0];
+                } else {
+                    $parsed['long'] = $parts[0];
+                }
             }
 
             $return[$tokenName] = $parsed;
@@ -217,7 +231,7 @@ Options:
 Available commands:
   list: List commands
  app
-  app:down  -  Place app in maintainance mode
+  app:down  -  Place app in maintenance mode
 
 HELP;
     }
