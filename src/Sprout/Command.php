@@ -30,6 +30,10 @@ class Command
      */
     public function argument(string $argument)
     {
+        if ($this->help['arguments'][$argument]['type'] === 'array') {
+            return explode(',', $this->arguments[$argument] ?? '');
+        }
+
         return $this->arguments[$argument] ?? null;
     }
 
@@ -174,29 +178,23 @@ class Command
         $this->params = array_merge($this->params, $params);
     }
 
-    public function call(Command $command): int
+    protected function validateCommandArguments(array $data, array &$dataPool)
     {
-        // verify correct flags and arguments before actually calling handler
-        $arguments = $this->help['arguments'];
-        $params = $this->help['params'];
-
-        foreach ($arguments as $key => $value) {
-            if (!$value['optional'] && !isset($this->arguments[$key])) {
+        foreach ($data as $key => $value) {
+            if (!$value['optional'] && (!isset($dataPool[$value['long']]) && !isset($dataPool[$key]))) {
                 throw new \Exception("Argument $key is required");
             }
+
+            if ($value['optional'] && (!isset($dataPool[$value['long']]) && !isset($dataPool[$key]))) {
+                $dataPool[$value['long']] = $value['default'];
+            }
         }
+    }
 
-        // foreach ($arguments as $key => $value) {
-        //     if (!$value['optional'] && !isset($this->arguments[$value['long']])) {
-        //         echo "Argument {$value['long']} is required";
-        //         die();
-        //     }
-        // }
-
-        // echo json_encode($arguments, JSON_PRETTY_PRINT);
-        // echo json_encode($params, JSON_PRETTY_PRINT);
-
-        // die();`
+    public function call(Command $command): int
+    {
+        $this->validateCommandArguments($this->help['params'], $this->params);
+        $this->validateCommandArguments($this->help['arguments'], $this->arguments);
 
         return $this->handler
             ? call_user_func($this->handler, $command)

@@ -86,8 +86,8 @@ class Sprout
      * @param string $command The command to run
      * @return int
      */
-    public function run(string $command): int
+    public function run(string $command, ?float $timeout = 60): int
     {
-        return $this->process($command)->run();
+        return $this->process($command)->setTimeout($timeout)->run();
     }
 }
