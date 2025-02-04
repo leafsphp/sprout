@@ -48,9 +48,9 @@ class Sprout
      * @param array $prompt
      * @return Prompt
      */
-    public function prompt(array $prompt): Prompt
+    public function prompt(array $prompt): array
     {
-        return (new Prompt($prompt));
+        return (new Prompt($prompt))->ask();
     }
 
     /**

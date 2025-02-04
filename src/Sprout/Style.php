@@ -21,6 +21,26 @@ class Style
         return "";
     }
 
+    /**
+     * Write output to console
+     * @param string $data
+     * @return void
+     */
+    public function write(string $data)
+    {
+        echo $data;
+    }
+
+    /**
+     * Write output to console with a new line
+     * @param string $data
+     * @return void
+     */
+    public function writeln(string $data)
+    {
+        $this->write($data . PHP_EOL);
+    }
+
     public function __tostring(): string
     {
         return $this->build();
