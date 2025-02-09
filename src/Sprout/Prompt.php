@@ -15,6 +15,8 @@ class Prompt
 
     protected $currentSelection = 0;
 
+    protected $screenLines = 0;
+
     public function __construct(array $prompt)
     {
         $this->questions = $prompt;
@@ -28,6 +30,11 @@ class Prompt
     public function ask(): array
     {
         foreach ($this->questions as $key => $prompt) {
+            if ($prompt['type'] === null) {
+                $this->cursor++;
+                continue;
+            }
+
             $this->questions[$this->cursor]['cursor'] = $key;
 
             $this->renderPrompt($prompt);
@@ -47,14 +54,14 @@ class Prompt
         return $this->answers;
     }
 
-    protected function renderPrompt($prompt)
+    protected function renderPrompt($prompt, $rerender = true)
     {
         if ($prompt['type'] === 'select') {
-            $this->renderSelectPrompt($prompt);
+            $this->renderSelectPrompt($prompt, $rerender);
             return;
         }
 
-        $this->renderTextPrompt($prompt);
+        $this->renderTextPrompt($prompt, $rerender);
     }
 
     protected function getAnswer($prompt)
@@ -81,37 +88,44 @@ class Prompt
                     }
 
                     $this->questions[$this->cursor]['answered'] = true;
-                    $this->renderPrompt($this->questions[$this->cursor]);
+                    $this->renderPrompt($this->questions[$this->cursor], false);
                     $this->cursor++;
 
                     break;
                 } elseif ($keyPress === "\033[A") {
                     if ($prompt['type'] === 'select') {
                         $this->currentSelection = $this->currentSelection === 0 ? count($prompt['choices']) - 1 : $this->currentSelection - 1;
+                        $this->renderPrompt($this->questions[$this->cursor], false);
                     }
                 } elseif ($keyPress === "\033[B") {
                     if ($prompt['type'] === 'select') {
                         $this->currentSelection = $this->currentSelection === count($prompt['choices']) - 1 ? 0 : $this->currentSelection + 1;
+                        $this->renderPrompt($this->questions[$this->cursor], false);
                     }
                 } elseif ($keyPress === "\033[C") {
                     // right
                 } elseif ($keyPress === "\033[D") {
                     // left
                 } elseif ($keyPress === "\177") {
-                    // backspace
-                    $this->currentInput = substr($this->currentInput, 0, -1);
+                    if ($this->currentInput !== '') {
+                        $this->currentInput = substr($this->currentInput, 0, -1);
+                        $this->renderPrompt($this->questions[$this->cursor], $this->currentInput !== '');
+                    }
+                } else {
+                    $this->currentInput .= $keyPress;
                     $this->renderPrompt($this->questions[$this->cursor]);
-                    continue;
                 }
-
-                $this->currentInput .= $keyPress;
-                $this->renderPrompt($this->questions[$this->cursor]);
             }
         }
     }
 
-    protected function renderTextPrompt($prompt)
+    protected function renderTextPrompt($prompt, $rerender = true)
     {
+        if ($this->currentInput || !$rerender) {
+            echo "\033[1A";
+            echo "\033[K";
+        }
+
         if ($prompt['answered'] ?? false) {
             sprout()->style()->write(
                 "✔ {$prompt['message']}: › … {$this->answers[$prompt['cursor']]}" . PHP_EOL
@@ -126,12 +140,24 @@ class Prompt
         );
     }
 
-    protected function renderSelectPrompt($prompt)
+    protected function renderSelectPrompt($prompt, $rerender = true)
     {
+        $move = count($prompt['choices']) + 1;
+
+        if ($this->currentSelection || !$rerender) {
+            echo "\033[{$move}A";
+            echo "\033[K";
+        }
+
         if ($prompt['answered'] ?? false) {
             sprout()->style()->write(
                 "✔ {$prompt['message']}: › … {$this->answers[$prompt['cursor']]}" . PHP_EOL
             );
+            
+            for ($i = 0; $i < ($move - 3); $i++) {
+                echo "\033[K";
+            }
+
             return;
         }
 
@@ -146,5 +172,20 @@ class Prompt
                 "$selected  {$option['title']}"
             );
         }
+    }
+
+    protected function clearScreen()
+    {
+        echo "\033c"; // ANSI escape code to clear screen
+    }
+
+    protected function readKey()
+    {
+        system("stty -echo"); // Disable terminal echo
+        system("stty cbreak"); // Disable line buffering
+        $key = fread(STDIN, 1);
+        system("stty echo"); // Re-enable terminal echo
+        system("stty -cbreak"); // Restore line buffering
+        return $key;
     }
 }
