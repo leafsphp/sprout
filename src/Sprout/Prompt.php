@@ -30,6 +30,10 @@ class Prompt
     public function ask(): array
     {
         foreach ($this->questions as $key => $prompt) {
+            if (is_callable($prompt['type'])) {
+                $prompt['type'] = $prompt['type']($this->answers);
+            }
+
             if ($prompt['type'] === null) {
                 $this->cursor++;
                 continue;
@@ -56,8 +60,17 @@ class Prompt
 
     protected function renderPrompt($prompt, $rerender = true)
     {
+        if (is_callable($prompt['type'])) {
+            $prompt['type'] = $prompt['type']($this->answers);
+        }
+
         if ($prompt['type'] === 'select') {
             $this->renderSelectPrompt($prompt, $rerender);
+            return;
+        }
+
+        if ($prompt['type'] === 'confirm') {
+            $this->renderConfirmPrompt($prompt, $rerender);
             return;
         }
 
@@ -85,13 +98,18 @@ class Prompt
 
                         $this->answers[$this->cursor] = $this->currentInput;
                         $this->currentInput = '';
+                    } elseif ($prompt['type'] === 'confirm') {
+                        $this->answers[$this->cursor] = $prompt['default'] ?? false;
+                        $this->currentInput = '';
                     }
 
                     $this->questions[$this->cursor]['answered'] = true;
-                    $this->renderPrompt($this->questions[$this->cursor], false);
+                    $this->renderPrompt($this->questions[$this->cursor], $prompt['type'] === 'select');
                     $this->cursor++;
 
                     break;
+                } elseif ($keyPress === "\t") {
+                    continue;
                 } elseif ($keyPress === "\033[A") {
                     if ($prompt['type'] === 'select') {
                         $this->currentSelection = $this->currentSelection === 0 ? count($prompt['choices']) - 1 : $this->currentSelection - 1;
@@ -112,6 +130,21 @@ class Prompt
                         $this->renderPrompt($this->questions[$this->cursor], $this->currentInput !== '');
                     }
                 } else {
+                    if ($prompt['type'] === 'confirm') {
+                        $keyPress = strtolower($keyPress);
+                        $keyPress = $keyPress === 'y' ? true : ($keyPress === 'n' ? false : '');
+                        
+                        if ($keyPress !== '') {
+                            $this->answers[$this->cursor] = $keyPress;
+                            $this->questions[$this->cursor]['answered'] = true;
+                            $this->renderPrompt($this->questions[$this->cursor]);
+                            $this->cursor++;
+                            break;
+                        }
+
+                        continue;
+                    }
+
                     $this->currentInput .= $keyPress;
                     $this->renderPrompt($this->questions[$this->cursor]);
                 }
@@ -128,15 +161,40 @@ class Prompt
 
         if ($prompt['answered'] ?? false) {
             sprout()->style()->write(
-                "✔ {$prompt['message']}: › … {$this->answers[$prompt['cursor']]}" . PHP_EOL
+                "\033[32m✔\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m…\033[0m {$this->answers[$prompt['cursor']]}" . PHP_EOL
             );
+
             return;
         }
 
-        $output = $this->currentInput ?: $prompt['default'];
+        $output = $this->currentInput ?: "\033[90m{$prompt['default']}\033[0m";
 
         sprout()->style()->write(
-            "? {$prompt['message']}: › $output" . PHP_EOL
+            "\033[36m?\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m›\033[0m $output" . PHP_EOL
+        );
+    }
+
+    protected function renderConfirmPrompt($prompt, $rerender = true)
+    {
+        if ($this->currentInput || !$rerender) {
+            echo "\033[1A";
+            echo "\033[K";
+        }
+
+        if ($prompt['answered'] ?? false) {
+            echo "\033[1A\033[J";
+
+            $parsedAnswer = $this->answers[$prompt['cursor']] ? 'Yes' : 'No';
+
+            sprout()->style()->write(
+                "\033[32m✔\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m…\033[0m $parsedAnswer" . PHP_EOL
+            );
+
+            return;
+        }
+
+        sprout()->style()->write(
+            "\033[36m?\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m›\033[0m \033[90m(y/N)\033[0m" . PHP_EOL
         );
     }
 
@@ -150,26 +208,25 @@ class Prompt
         }
 
         if ($prompt['answered'] ?? false) {
+            echo "\033[{$move}A\033[J";
+
             sprout()->style()->write(
-                "✔ {$prompt['message']}: › … {$this->answers[$prompt['cursor']]}" . PHP_EOL
+                "\033[32m✔\033[0m \033[1;1m{$prompt['message']}:\033[0m › … {$this->answers[$prompt['cursor']]}" . PHP_EOL
             );
-            
-            for ($i = 0; $i < ($move - 3); $i++) {
-                echo "\033[K";
-            }
 
             return;
         }
 
         sprout()->style()->writeln(
-            "? {$prompt['message']}: › - Use arrow-keys. Return to submit."
+            "\033[36m?\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m› - Use arrow-keys. Return to submit.\033[0m"
         );
 
         foreach ($prompt['choices'] as $key => $option) {
-            $selected = $this->currentSelection === $key ? '❯' : ' ';
+            $selected = $this->currentSelection === $key ? "\033[36m❯\033[0m" : ' ';
+            $item = $this->currentSelection === $key ? "\033[4;1m{$option['title']}\033[0m" : $option['title'];
 
             sprout()->style()->writeln(
-                "$selected  {$option['title']}"
+                "$selected  $item"
             );
         }
     }
