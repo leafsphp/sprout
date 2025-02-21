@@ -72,7 +72,7 @@ class App
         $argv = (array) $_SERVER['argv'];
         $commandName = $argv[1] ?? '';
 
-        if ($commandName === '') {
+        if ($commandName === '' || $commandName === 'list') {
             $this->renderListView();
             return;
         }
@@ -217,6 +217,12 @@ class App
 
     protected function renderListView()
     {
+        $commandList = '';
+
+        foreach ($this->config['commands'] as $commandName => $command) {
+            $commandList .= "  \033[1;32m$commandName\033[0m — {$command['handler']->getDescription()}\n";
+        }
+
         echo <<<HELP
 {$this->config['name']} {$this->config['version']}
 
@@ -225,13 +231,11 @@ Usage:
 
 Options:
   -h, --help  -  Display help for the given command.
-  -q, --quiet  -  Do not output any message
   -V, --version  -  Display this application version
 
 Available commands:
-  list: List commands
- app
-  app:down  -  Place app in maintenance mode
+  \033[1;32mlist\033[0m — List commands
+$commandList
 
 HELP;
     }
