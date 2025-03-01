@@ -17,14 +17,17 @@ class Prompt
 
     protected $screenLines = 0;
 
+	protected $isWindows = false;
+
     public function __construct(array $prompt)
     {
         $this->questions = $prompt;
+		$this->isWindows = PHP_OS_FAMILY === 'Windows';
     }
 
     public function onError()
     {
-        // 
+        //
     }
 
     public function ask(): array
@@ -80,8 +83,11 @@ class Prompt
     protected function getAnswer($prompt)
     {
         $stdin = fopen('php://stdin', 'r');
-        stream_set_blocking($stdin, false);
-        system('stty cbreak -echo');
+
+		if (!$this->isWindows) {
+			stream_set_blocking($stdin, false);
+			system('stty cbreak -echo');
+		}
 
         while (1) {
             $keyPress = fgets($stdin);
@@ -133,7 +139,7 @@ class Prompt
                     if ($prompt['type'] === 'confirm') {
                         $keyPress = strtolower($keyPress);
                         $keyPress = $keyPress === 'y' ? true : ($keyPress === 'n' ? false : '');
-                        
+
                         if ($keyPress !== '') {
                             $this->answers[$this->cursor] = $keyPress;
                             $this->questions[$this->cursor]['answered'] = true;
@@ -150,6 +156,12 @@ class Prompt
                 }
             }
         }
+
+		fclose($stdin);
+
+		if (!$this->isWindows) {
+			system('stty sane');
+		}
     }
 
     protected function renderTextPrompt($prompt, $rerender = true)
