@@ -84,16 +84,16 @@ class Prompt
     {
         $stdin = fopen('php://stdin', 'r');
 
-		if (!$this->isWindows) {
-			stream_set_blocking($stdin, false);
-			system('stty cbreak -echo');
-		}
+        if (!$this->isWindows) {
+            stream_set_blocking($stdin, false);
+            system('stty cbreak -echo');
+        }
 
         while (1) {
-            $keyPress = fgets($stdin);
+            $keyPress = $this->isWindows ? $this->readWindowsInput() : fgets($stdin);
 
             if ($keyPress) {
-                if ($keyPress === "\n") {
+                if ($keyPress === "\n" || $keyPress === "\r") {
                     if ($prompt['type'] === 'select') {
                         $this->answers[$this->cursor] = $prompt['choices'][$this->currentSelection]['value'];
                         $this->currentSelection = 0;
@@ -116,12 +116,12 @@ class Prompt
                     break;
                 } elseif ($keyPress === "\t") {
                     continue;
-                } elseif ($keyPress === "\033[A") {
+                } elseif ($keyPress === "\033[A" || $keyPress === "UP") {
                     if ($prompt['type'] === 'select') {
                         $this->currentSelection = $this->currentSelection === 0 ? count($prompt['choices']) - 1 : $this->currentSelection - 1;
                         $this->renderPrompt($this->questions[$this->cursor], false);
                     }
-                } elseif ($keyPress === "\033[B") {
+                } elseif ($keyPress === "\033[B" || $keyPress === "DOWN") {
                     if ($prompt['type'] === 'select') {
                         $this->currentSelection = $this->currentSelection === count($prompt['choices']) - 1 ? 0 : $this->currentSelection + 1;
                         $this->renderPrompt($this->questions[$this->cursor], false);
@@ -130,7 +130,7 @@ class Prompt
                     // right
                 } elseif ($keyPress === "\033[D") {
                     // left
-                } elseif ($keyPress === "\177") {
+                } elseif ($keyPress === "\177" || $keyPress === "BACKSPACE") {
                     if ($this->currentInput !== '') {
                         $this->currentInput = substr($this->currentInput, 0, -1);
                         $this->renderPrompt($this->questions[$this->cursor], $this->currentInput !== '');
@@ -157,11 +157,11 @@ class Prompt
             }
         }
 
-		fclose($stdin);
+        fclose($stdin);
 
-		if (!$this->isWindows) {
-			system('stty sane');
-		}
+        if (!$this->isWindows) {
+            system('stty sane');
+        }
     }
 
     protected function renderTextPrompt($prompt, $rerender = true)
@@ -246,6 +246,31 @@ class Prompt
     protected function clearScreen()
     {
         echo "\033c"; // ANSI escape code to clear screen
+    }
+
+    protected function readWindowsInput(): string
+    {
+        // Windows does not support raw stdin reading like Unix, so we use `readline()`
+        $char = trim(readline());
+
+        if ($char === "") {
+            return "\n"; // Simulate Enter key
+        }
+
+        if ($char === "\x08") { // Backspace
+            return "BACKSPACE";
+        }
+
+        if ($char === "\xe0") { // Special key indicator (arrows)
+            $arrow = fread(STDIN, 1);
+            return match ($arrow) {
+                "H" => "UP",
+                "P" => "DOWN",
+                default => "",
+            };
+        }
+
+        return $char;
     }
 
     protected function readKey()
