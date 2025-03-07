@@ -17,12 +17,12 @@ class Prompt
 
     protected $screenLines = 0;
 
-	protected $isWindows = false;
+    protected $isWindows = false;
 
     public function __construct(array $prompt)
     {
         $this->questions = $prompt;
-		$this->isWindows = PHP_OS_FAMILY === 'Windows';
+        $this->isWindows = PHP_OS_FAMILY === 'Windows';
     }
 
     public function onError()
@@ -91,11 +91,14 @@ class Prompt
 
         while (1) {
             $keyPress = $this->isWindows ? $this->readWindowsInput() : fgets($stdin);
-
-            if ($keyPress) {
-                if ($keyPress === "\n" || $keyPress === "\r") {
+            
+            if ($keyPress || is_numeric($keyPress)) {
+                if ($keyPress === "\n" || $keyPress === "\r" || ($prompt['type'] === 'select' && is_numeric($keyPress))) {
                     if ($prompt['type'] === 'select') {
-                        $this->answers[$this->cursor] = $prompt['choices'][$this->currentSelection]['value'];
+                        $this->answers[$this->cursor] = ($this->isWindows)
+                            ? $prompt['choices'][(int) $keyPress]['value']
+                            : $prompt['choices'][$this->currentSelection]['value'];
+
                         $this->currentSelection = 0;
                     } elseif ($prompt['type'] === 'text') {
                         if ($this->currentInput === '') {
@@ -213,6 +216,7 @@ class Prompt
     protected function renderSelectPrompt($prompt, $rerender = true)
     {
         $move = count($prompt['choices']) + 1;
+        $hint = $this->isWindows ? 'Enter selection number. Enter to submit' : 'Use arrow-keys. Return to submit';
 
         if ($this->currentSelection || !$rerender) {
             echo "\033[{$move}A";
@@ -230,12 +234,12 @@ class Prompt
         }
 
         sprout()->style()->writeln(
-            "\033[36m?\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m› - Use arrow-keys. Return to submit.\033[0m"
+            "\033[36m?\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m› - $hint.\033[0m"
         );
 
         foreach ($prompt['choices'] as $key => $option) {
             $selected = $this->currentSelection === $key ? "\033[36m❯\033[0m" : ' ';
-            $item = $this->currentSelection === $key ? "\033[4;1m{$option['title']}\033[0m" : $option['title'];
+            $item = ($this->currentSelection === $key ? "\033[4;1m{$option['title']}\033[0m" : $option['title']) . ($this->isWindows ? " ($key)" : '');
 
             sprout()->style()->writeln(
                 "$selected  $item"
