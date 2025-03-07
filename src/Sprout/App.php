@@ -54,6 +54,7 @@ class App
             'signature' => $command->getSignature(),
             'params' => $commandOptions['params'],
             'arguments' => $commandOptions['arguments'],
+            'parsedSignature' => $commandOptions['parsed'],
             'handler' => $command,
         ];
 
@@ -120,7 +121,7 @@ class App
         $command->setParams($params);
         $command->setArguments($arguments);
 
-        if (in_array('--help', $argv)) {
+        if (in_array('--help', $argv) || in_array('-h', $argv)) {
             $this->renderHelpView($command);
 
             return;
@@ -144,6 +145,7 @@ class App
 
         return [
             'name' => $name,
+            'parsed' => ArgvParser::parseCommandSignature($signature),
             'params' => array_keys($params),
             'arguments' => array_keys($arguments),
             'help' => [
