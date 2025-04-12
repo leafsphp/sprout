@@ -44,8 +44,21 @@ class Prompt
 
             $this->questions[$this->cursor]['cursor'] = $key;
 
-            $this->renderPrompt($prompt);
+            if ($prompt['type'] === 'select') {
+                $prompt['choices'] = array_values(array_filter($prompt['choices'], function ($choice) {
+                    $choice['disabled'] ??= false;
 
+                    if (is_callable($choice['disabled'])) {
+                        return !$choice['disabled']($this->answers);
+                    }
+
+                    return !$choice['disabled'];
+                }));
+
+                $this->questions[$this->cursor]['choices'] = $prompt['choices'];
+            }
+
+            $this->renderPrompt($prompt);
             $this->getAnswer($prompt);
 
             $answer = $this->answers[$key] ?? null;
@@ -215,6 +228,7 @@ class Prompt
 
     protected function renderSelectPrompt($prompt, $rerender = true)
     {
+        // die(json_encode($prompt['choices'], JSON_PRETTY_PRINT));
         $move = count($prompt['choices']) + 1;
         $hint = $this->isWindows ? 'Enter selection number. Enter to submit' : 'Use arrow-keys. Return to submit';
 
