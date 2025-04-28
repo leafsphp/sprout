@@ -281,11 +281,15 @@ class Prompt
 
         if ($char === "\xe0") { // Special key indicator (arrows)
             $arrow = fread(STDIN, 1);
-            return match ($arrow) {
-                "H" => "UP",
-                "P" => "DOWN",
-                default => "",
-            };
+
+            switch ($arrow) {
+                case "H":
+                    return "UP";
+                case "P":
+                    return "DOWN";
+                default:
+                    return "";
+            }
         }
 
         return $char;
