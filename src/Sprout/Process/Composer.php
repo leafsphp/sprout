@@ -77,7 +77,7 @@ class Composer
     public function install($package = null, $callback = null): Process
     {
         $installCommand = $this->global ? 'global require' : 'require';
-        $process = new Process($package ? "composer $installCommand $package" : "composer install");
+        $process = new Process($package ? "composer $installCommand $package --ansi" : "composer install --ansi");
         $process->run($callback);
 
         return $process;
