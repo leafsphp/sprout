@@ -31,7 +31,9 @@ class Command
     public function argument(string $argument)
     {
         if ($this->help['arguments'][$argument]['type'] === 'array') {
-            return explode(',', $this->arguments[$argument] ?? '');
+            if (is_string($this->arguments[$argument])) {
+                return explode(',', $this->arguments[$argument] ?? '');
+            }
         }
 
         return $this->arguments[$argument] ?? null;

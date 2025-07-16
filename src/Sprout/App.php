@@ -61,6 +61,71 @@ class App
         return $command;
     }
 
+    protected function normalizeCommandInput(string $input): array
+    {
+        $tokens = preg_split('/\s+/', trim($input));
+        $result = [
+            'command' => null,
+            'args' => [],
+            'options' => []
+        ];
+
+        $i = 0;
+        $len = count($tokens);
+
+        if ($len > 0) {
+            $result['command'] = $tokens[$i++];
+        }
+
+        while ($i < $len) {
+            $token = $tokens[$i];
+
+            // Long option: --option or --option=value
+            if (strpos($token, '--') === 0) {
+                $option = substr($token, 2);
+                if (strpos($option, '=') !== false) {
+                    [$name, $value] = explode('=', $option, 2);
+                    $result['options'][$name] = strpos($value, ',') !== false ? explode(',', $value) : $value;
+                } elseif (isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
+                    // --option value
+                    $value = [];
+                    while (isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
+                        $value[] = $tokens[++$i];
+                    }
+                    $result['options'][$option] = count($value) === 1 ? $value[0] : $value;
+                } else {
+                    // --option (boolean true)
+                    $result['options'][$option] = true;
+                }
+            }
+
+            // Short option: -a or -abc or -k value
+            elseif (strpos($token, '-') === 0 && strlen($token) > 1) {
+                $flags = substr($token, 1);
+
+                // Handle -k value
+                if (strlen($flags) === 1 && isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
+                    $result['options'][$flags] = $tokens[++$i];
+                } else {
+                    // Handle -abc => a=true, b=true, c=true
+                    foreach (str_split($flags) as $flag) {
+                        $result['options'][$flag] = true;
+                    }
+                }
+            }
+
+            // Normal argument
+            else {
+                $result['args'][] = $token;
+            }
+
+            $i++;
+        }
+
+        return $result;
+    }
+
+
     /**
      * Run your sprout app
      * @return void
@@ -71,7 +136,10 @@ class App
         $arguments = [];
 
         $argv = (array) $_SERVER['argv'];
+
         $commandName = $argv[1] ?? '';
+        $commandString = join(' ', array_slice($argv, 1));
+        $commandData = $this->normalizeCommandInput($commandString);
 
         if ($commandName === '' || $commandName === 'list') {
             $this->renderListView();
@@ -84,38 +152,27 @@ class App
         }
 
         $command = $this->config['commands'][$commandName]['handler'];
-        $argumentNames = $this->config['commands'][$commandName]['arguments'];
 
-        foreach (array_slice($argv, 2) as $arg) {
-            $parts = explode('=', $arg);
+        foreach (array_values($command->getHelp()['params']) as $paramData) {
+            $params[$paramData['long']] = (
+                isset($commandData['options'][$paramData['long']]) ||
+                isset($commandData['options'][$paramData['short']])
+            ) ?
+                ($commandData['options'][$paramData['long']] ?? $commandData['options'][$paramData['short']] ?? null) :
+                $paramData['default'] ?? null;
 
-            if (strpos($parts[0], '-') === 0 && strpos($parts[0], '--') === false) {
-                $paramName = array_filter($command->getHelp()['params'], function ($param) use ($parts) {
-                    return $param['short'] === ltrim($parts[0], '-');
-                });
-
-                if (!empty($paramName)) {
-                    $parts[0] = '--' . (array_values($paramName)[0]['long']);
-                }
+            if ($paramData['optional'] === false && $params[$paramData['long']] === null) {
+                die("Argument --{$paramData['long']} is required\n");
             }
+        }
 
-            if (count($parts) >= 2) {
-                $params[substr($parts[0], 2)] = join('=', array_slice($parts, 1));
-                continue;
-            }
-
-            if (strpos($parts[0], '--') === 0) {
-                $params[substr($parts[0], 2)] = true;
-                continue;
-            }
-
-            while (null !== ($part = array_shift($argumentNames))) {
-                $part = str_replace(['{', '}'], '', $part);
-
-                $arguments[$part] = $arg;
-
+        foreach ($this->config['commands'][$commandName]['arguments'] as $index => $arg) {
+            if ($command->getHelp()['arguments'][$arg]['type'] ?? null === 'array') {
+                $arguments[$arg] = array_slice($commandData['args'], $index);
                 break;
             }
+
+            $arguments[$arg] = $commandData['args'][$index] ?? null;
         }
 
         $command->setParams($params);
