@@ -64,7 +64,7 @@ class Command
      */
     public function write(string $data)
     {
-        echo $data;
+        echo Style\Renderer::render($data);
     }
 
     /**
