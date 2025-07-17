@@ -167,7 +167,7 @@ class App
         }
 
         foreach ($this->config['commands'][$commandName]['arguments'] as $index => $arg) {
-            if ($command->getHelp()['arguments'][$arg]['type'] ?? null === 'array') {
+            if (($command->getHelp()['arguments'][$arg]['type'] ?? null) === 'array') {
                 $arguments[$arg] = array_slice($commandData['args'], $index);
                 break;
             }
