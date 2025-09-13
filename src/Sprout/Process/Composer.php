@@ -78,6 +78,7 @@ class Composer
     {
         $installCommand = $this->global ? 'global require' : 'require';
         $process = new Process($package ? "composer $installCommand $package --ansi" : "composer install --ansi");
+        $process->setTimeout(null);
         $process->run($callback);
 
         return $process;
@@ -92,6 +93,7 @@ class Composer
     {
         $removeCommand = $this->global ? 'global remove' : 'remove';
         $process = new Process("composer $removeCommand $package");
+        $process->setTimeout(null);
         $process->run($callback);
 
         return $process;
@@ -105,6 +107,7 @@ class Composer
     public function runScript(string $script, $callback = null): Process
     {
         $process = new Process("composer run $script");
+        $process->setTimeout(null);
         $process->run($callback);
 
         return $process;

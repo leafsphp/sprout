@@ -81,6 +81,7 @@ class Npm
     public function install($package = null, $callback = null): Process
     {
         $process = new Process("{$this->packageManager} add $package");
+        $process->setTimeout(null);
         $process->run($callback);
 
         return $process;
@@ -94,6 +95,7 @@ class Npm
     public function remove($package, $callback = null): Process
     {
         $process = new Process("{$this->packageManager} uninstall $package");
+        $process->setTimeout(null);
         $process->run($callback);
 
         return $process;
@@ -107,6 +109,7 @@ class Npm
     public function runScript(string $script, $callback = null): Process
     {
         $process = new Process("{$this->packageManager} run $script");
+        $process->setTimeout(null);
         $process->run($callback);
 
         return $process;
