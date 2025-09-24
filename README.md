@@ -82,7 +82,7 @@ You can then register this command with the app instance:
 $app->register(\MyCliApp\Commands\GreetCommand::class);
 ```
 
-## Styling Output
+<!-- ## Styling Output
 
 Leaf Sprout comes with a built-in output styling system that allows you to style your output using a simple API adapted from TermWind. Here's an example of how you can style your output:
 
@@ -118,7 +118,28 @@ Most of the styling options are chainable, so you can chain multiple styles toge
 
 ```php
 style()->bold()->underline()->apply('text-red-500')->to('Hello, world!');
+``` -->
+
+## Styling Output
+
+Leaf Sprout comes with a built-in output styling system that allows you to style your output using a simple API adapted from Symfony Console. Here's an example of how you can style your output:
+
+```php
+$this->write("<info>Hello</info>, <comment>world</comment>!");
+$this->write("<error>Error occurred!</error>");
+$this->write("<question>Are you sure?</question>");
 ```
+
+Or you can use pre-configured styles like `success()`, `error()`, `warning()`, and `info()`:
+
+```php
+$this->success('Operation successful');
+$this->error('Operation failed');
+$this->warning('This is a warning');
+$this->info('This is some information');
+```
+
+Later versions will include more advanced styling options modelled after TailwindCSS and TermWind.
 
 ## Input Handling
 
@@ -127,15 +148,7 @@ Leaf Sprout comes with a built-in input handling system that allows you to easil
 ```php
 $name = sprout()->prompt([
     'type' => 'text', // 'select', 'confirm', 'password', 'number', 'text'
-    'initial' => 'John Doe',
     'message' => 'What is your name?',
-    'validate' => function ($value) {
-        if (empty($value)) {
-            return 'Name cannot be empty';
-        }
-
-        return true;
-    }
 ]);
 
 $command->write("Hello, $name!"); // Hello, John Doe!
@@ -151,20 +164,13 @@ $results = sprout()->prompt([
         'type' => 'text',
         'name' => 'name',
         'message' => 'What is your project name?',
-        'initial' => 'my-project',
-        'validate' => function ($value) {
-            if (empty($value)) {
-                return 'Name cannot be empty';
-            }
-
-            return true;
-        }
+        'default' => 'my-project',
     ],
     [
         'type' => $possiblySetValue ? null : 'select',
         'name' => 'type',
         'message' => 'What type of project do you want?',
-        'initial' => 0,
+        'default' => 0,
         'choices' => [
             ['title' => 'Web', 'value' => 'web'],
             ['title' => 'API', 'value' => 'api'],
@@ -175,7 +181,7 @@ $results = sprout()->prompt([
         'type' => 'confirm',
         'name' => 'install',
         'message' => 'Do you want to install dependencies?',
-        'initial' => true,
+        'default' => true,
     ],
 ]);
 
@@ -222,12 +228,14 @@ $process->isSuccessful(); // true
 $process->getExitCode(); // 0
 ```
 
-You can also use the `run()` method to run a process and get the output:
+You can also use the `run()` method to run a process and log the output to the console in real-time, and then return it's exit code:
 
 ```php
-$output = sprout()->run('ls -la');
+$exitCode = sprout()->run('ls -la');
 
-$command->write($output);
+if ($exitCode !== 0) {
+    $command->error("An error occurred while running the process");
+}
 ```
 
 ## Composer & Npm Scripts

@@ -132,6 +132,16 @@ class Prompt
                         $this->currentSelection = 0;
                     } elseif ($prompt['type'] === 'text') {
                         if ($this->currentInput === '') {
+                            // if (isset($prompt['validate']) && is_callable($prompt['validate'])) {
+                            //     $validation = $prompt['validate']($this->currentInput, $this->answers);
+
+                            //     if ($validation !== true) {
+                            //         echo ($validation);
+                            //         $this->renderPrompt($this->questions[$this->cursor], false);
+                            //         continue;
+                            //     }
+                            // }
+
                             $this->currentInput = $prompt['default'] ?? '';
                         }
 
