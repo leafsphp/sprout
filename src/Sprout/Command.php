@@ -80,6 +80,38 @@ class Command
     }
 
     /**
+     * Output some data as a comment
+     */
+    public function comment($messages)
+    {
+        return $this->writeln("<comment>$messages</comment>");
+    }
+
+    /**
+     * Output some data as a info
+     */
+    public function info($messages)
+    {
+        return $this->writeln("<info>$messages</info>");
+    }
+
+    /**
+     * Output some data as a error
+     */
+    public function error($messages)
+    {
+        return $this->writeln("<error>$messages</error>");
+    }
+
+    /**
+     * Output some data as a question
+     */
+    public function question($messages)
+    {
+        return $this->writeln("<question>$messages</question>");
+    }
+
+    /**
      * Create a new command from function
      * @param string $signature
      * @param callable $handler
