@@ -19,6 +19,8 @@ class Prompt
 
     protected $isWindows = false;
 
+    protected $singlePrompt = false;
+
     public function __construct(array $prompt)
     {
         $this->questions = $prompt;
@@ -30,8 +32,17 @@ class Prompt
         //
     }
 
-    public function ask(): array
+    /**
+     * Display the prompt and get answers
+     * @return mixed The answers
+     */
+    public function ask()
     {
+        if (isset($this->questions['type'])) {
+            $this->questions = [$this->questions];
+            $this->singlePrompt = true;
+        }
+
         foreach ($this->questions as $key => $prompt) {
             if (is_callable($prompt['type'])) {
                 $prompt['type'] = $prompt['type']($this->answers);
@@ -71,6 +82,10 @@ class Prompt
             $this->answers[$prompt['name']] = $answer;
         }
 
+        if ($this->singlePrompt) {
+            return $this->answers[0];
+        }
+
         return $this->answers;
     }
 
@@ -104,7 +119,7 @@ class Prompt
 
         while (1) {
             $keyPress = $this->isWindows ? $this->readWindowsInput() : fgets($stdin);
-            
+
             if ($keyPress || is_numeric($keyPress)) {
                 if ($keyPress === "\n" || $keyPress === "\r" || ($prompt['type'] === 'select' && is_numeric($keyPress))) {
                     if ($prompt['type'] === 'select') {
