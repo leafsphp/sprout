@@ -79,7 +79,9 @@ class Prompt
                 return [];
             }
 
-            $this->answers[$prompt['name']] = $answer;
+            if (isset($prompt['name'])) {
+                $this->answers[$prompt['name']] = $answer;
+            }
         }
 
         if ($this->singlePrompt) {
@@ -210,7 +212,7 @@ class Prompt
             return;
         }
 
-        $output = $this->currentInput ?: "\033[90m{$prompt['default']}\033[0m";
+        $output = $this->currentInput ?: (isset($prompt['default']) ? "\033[90m{$prompt['default']}\033[0m" : '');
 
         sprout()->style()->write(
             "\033[36m?\033[0m \033[1;1m{$prompt['message']}:\033[0m \033[90m›\033[0m $output" . PHP_EOL
