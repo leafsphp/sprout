@@ -46,11 +46,27 @@ class Sprout
     /**
      * Create a new Prompt
      * @param array $prompt
-     * @return Prompt
+     * @return mixed The answers to prompt questions
      */
-    public function prompt(array $prompt): array
+    public function prompt(array $prompt)
     {
         return (new Prompt($prompt))->ask();
+    }
+
+    /**
+     * Prompt a confirmation
+     * @param string $message The confirmation message
+     * @param bool $default The default value
+     * @return bool
+     */
+    public function confirm(string $message, bool $default = false)
+    {
+        return $this->prompt([
+            'type' => 'confirm',
+            'name' => 'confirmation',
+            'message' => $message,
+            'default' => $default
+        ]);
     }
 
     /**
