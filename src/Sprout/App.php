@@ -334,12 +334,27 @@ HELP;
         $paramsHelp = '';
         $argumentsHelp = '';
 
+        if (count($command->getHelp()['arguments']) === 0) {
+            $argumentsHelp = "  This command has no arguments.\n";
+        }
+
         foreach ($command->getHelp()['arguments'] as $helpKey => $helpValue) {
             $argumentsHelp .= "  $helpKey: {$helpValue['description']}\n";
         }
 
         foreach ($command->getHelp()['params'] as $helpKey => $helpValue) {
-            $paramsHelp .= "  $helpKey: {$helpValue['description']}\n";
+            $paramsHelp .= (($helpValue['short'] !== null) ? "  -{$helpValue['short']}," : ' ') .
+                " --{$helpValue['long']}: {$helpValue['description']}\n";
+        }
+
+        $options = $command->getHelp();
+        $arguments = $options['arguments'];
+        $params = count($options['params']) > 0 ? '[--options...]' : '';
+
+        $usageArguments = '';
+
+        foreach ($arguments as $argKey => $argValue) {
+            $usageArguments .= " [$argKey]";
         }
 
         echo <<<HELP
@@ -347,7 +362,7 @@ Description:
   {$command->getDescription()}
 
 Usage:
-  {$command->getName()} [options] [--] [<packages>...]
+  {$command->getName()}{$usageArguments} {$params}
 
 Arguments:
 $argumentsHelp
