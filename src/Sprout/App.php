@@ -48,6 +48,10 @@ class App
 
         $commandOptions = $this->parseCommandSignature($command->getSignature());
 
+        if ($commandOptions === null) {
+            throw new \Exception("Invalid command signature: " . json_encode(get_class($command)));
+        }
+
         $command->setHelp($commandOptions['help']);
 
         $this->config['commands'][$commandOptions['name']] = [
