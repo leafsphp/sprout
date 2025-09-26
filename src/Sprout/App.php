@@ -280,27 +280,53 @@ class App
 
     protected function renderListView()
     {
-        $commandList = '';
+        $groups = [];
 
         foreach ($this->config['commands'] as $commandName => $command) {
-            $commandList .= "  \033[1;32m$commandName\033[0m — {$command['handler']->getDescription()}\n";
+            $parts = explode(':', $commandName, 2);
+
+            $namespace = (count($parts) === 2) ? $parts[0] : '_global';
+
+            $groups[$namespace][$commandName] = $command['handler']->getDescription();
         }
 
-        echo <<<HELP
+        ksort($groups);
+
+        foreach ($groups as $namespace => &$commands) {
+            ksort($commands);
+        }
+
+        $output = <<<HELP
 {$this->config['name']} {$this->config['version']}
 
 Usage:
   command [options] [arguments]
 
 Options:
-  -h, --help  -  Display help for the given command.
-  -V, --version  -  Display this application version
+  -h, --help        Display help for the given command
+  -V, --version     Display this application version
 
 Available commands:
-  \033[1;32mlist\033[0m — List commands
-$commandList
 
 HELP;
+
+        if (isset($groups['_global'])) {
+            foreach ($groups['_global'] as $name => $desc) {
+                $output .= sprintf("  \033[1;32m%-18s\033[0m %s\n", $name, $desc);
+            }
+
+            unset($groups['_global']);
+        }
+
+        foreach ($groups as $namespace => $commands) {
+            $output .= " $namespace\n";
+
+            foreach ($commands as $name => $desc) {
+                $output .= sprintf("  \033[1;32m%-18s\033[0m %s\n", $name, $desc);
+            }
+        }
+
+        echo Style\Renderer::render($output);
     }
 
     protected function renderHelpView(Command $command)
