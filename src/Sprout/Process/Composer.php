@@ -21,14 +21,24 @@ class Composer
      */
     public function json(): array
     {
-        $composerJson = getcwd() . '/composer.json';
+        return $this->jsonFromFile(
+            getcwd() . '/composer.json'
+        );
+    }
 
-        if (!file_exists($composerJson)) {
+    /**
+     * Return the composer.json from file path
+     * @param string $path The path to the composer.json file
+     * @return array
+     */
+    public function jsonFromFile(string $path): array
+    {
+        if (!file_exists($path)) {
             return [];
         }
 
         return json_decode(
-            file_get_contents($composerJson),
+            file_get_contents($path),
             true
         );
     }
@@ -39,16 +49,33 @@ class Composer
      */
     public function lock(): array
     {
-        $composerLock = getcwd() . '/composer.lock';
-
-        if (!file_exists($composerLock)) {
-            return [];
-        }
-
-        return json_decode(
-            file_get_contents($composerLock),
-            true
+        return $this->jsonFromFile(
+            getcwd() . '/composer.lock'
         );
+    }
+
+    /**
+     * Get version of current composer package (if available)
+     * @return string|null
+     */
+    public function version(): ?string
+    {
+        $json = $this->json();
+        return $json['version'] ?? null;
+    }
+
+    /**
+     * Get latest version of a package from packagist.org
+     * @param string $package The package to check
+     * @return string|null
+     */
+    public function latestVersion(string $package): ?string
+    {
+        $package = json_decode(
+            file_get_contents("https://repo.packagist.org/p2/$package.json")
+        );
+
+        return $package->packages->{$package}[0];
     }
 
     /**
