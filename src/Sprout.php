@@ -10,6 +10,7 @@ use Leaf\Sprout\Process\Composer;
 use Leaf\Sprout\Process\Npm;
 use Leaf\Sprout\Style;
 use Leaf\Sprout\Prompt;
+use Leaf\Sprout\System;
 
 /**
  * Leaf Sprout
@@ -51,6 +52,14 @@ class Sprout
     public function prompt(array $prompt)
     {
         return (new Prompt($prompt))->ask();
+    }
+
+    /**
+     * Return an instance of system utils
+     */
+    public function system(): System
+    {
+        return new System();
     }
 
     /**
