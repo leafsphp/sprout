@@ -12,6 +12,7 @@ namespace Leaf\Sprout;
 class Process
 {
     protected $process;
+    protected $errorHandler;
 
     public function __construct(string $command)
     {
@@ -19,7 +20,13 @@ class Process
             throw new \Exception('The Process class relies on proc_open, which is not available on your PHP installation.');
         }
 
-        $this->process = \Symfony\Component\Process\Process::fromShellCommandline($command);
+        $this->process = \Symfony\Component\Process\Process::fromShellCommandline(
+            $command,
+            null,
+            null,
+            null,
+            null
+        );
     }
 
     /**
@@ -27,6 +34,7 @@ class Process
      */
     public function onError(callable $errorHandler): Process
     {
+        $this->errorHandler = $errorHandler;
         return $this;
     }
 
@@ -37,13 +45,30 @@ class Process
      */
     public function run(?callable $callback = null): int
     {
-        return $this->process->run(function ($type, $buffer) use ($callback) {
-            if ($callback) {
-                $callback($type, $buffer);
-            } else {
-                echo $buffer;
+        try {
+            return $this->process->run(function ($type, $buffer) use ($callback) {
+                if ($callback) {
+                    $callback($type, $buffer);
+                } else {
+                    echo $buffer;
+                }
+            });
+        } catch (\Throwable $th) {
+            if ($this->errorHandler) {
+                \call_user_func($this->errorHandler, $th->getMessage(), $this->process);
             }
-        });
+
+            throw $th;
+        }
+    }
+
+    /**
+     * Check if the process is successful
+     * @return bool
+     */
+    public function isSuccessful(): bool
+    {
+        return $this->process->isSuccessful();
     }
 
     /**
