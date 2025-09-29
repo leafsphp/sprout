@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Console;
+
+use Leaf\Sprout\Command;
+
+class ClassName extends Command
+{
+    protected $signature = 'CommandName
+        {argument? : argument description}
+        {--o|option? : option description}';
+    protected $description = 'CommandName command\'s description';
+    protected $help = 'CommandName command\'s help';
+
+    /**
+     * Main body for your command
+     */
+    protected function handle()
+    {
+        $this->comment(
+            "CommandName command's output {$this->argument('argument')} {$this->option('option')}"
+        );
+
+        return 0;
+    }
+}
