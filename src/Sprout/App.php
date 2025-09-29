@@ -15,6 +15,14 @@ class App
     public function __construct(array $config = [])
     {
         $this->config = $config;
+
+        if (isset($this->config['autoload'])) {
+            $this->autoloadCommands($this->config['autoload']);
+        }
+
+        if (isset($this->config['autorun']) && $this->config['autorun'] === true) {
+            $this->run();
+        }
     }
 
     /**
@@ -63,6 +71,29 @@ class App
         ];
 
         return $command;
+    }
+
+    /**
+     * Autoload commands from a directory
+     * @param string $path The path to the commands directory
+     * @return void
+     */
+    public function autoloadCommands(string $path): void
+    {
+        if (is_dir($path)) {
+            $commandFiles = scandir($path);
+
+            foreach ($commandFiles as $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+                    $className = pathinfo($file, PATHINFO_FILENAME);
+                    $fullClassName = "App\\Commands\\$className";
+
+                    if (class_exists($fullClassName)) {
+                        $this->register(new $fullClassName());
+                    }
+                }
+            }
+        }
     }
 
     protected function normalizeCommandInput(string $input): array
