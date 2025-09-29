@@ -23,7 +23,7 @@ class GenerateConsoleCommand extends Command
             return str_replace(
                 ['ClassName', 'CommandName'],
                 [$className, $commandName],
-                \file_get_contents(__DIR__ . '/stubs/console.stub')
+                \file_get_contents(__DIR__ . '/console.stub')
             );
         }, ['recursive' => true]);
 
