@@ -32,7 +32,8 @@
   "prefer-stable": true,
   "require": {
     "php": "^7.4|^8.0",
-    "symfony/process": "*"
+    "symfony/process": "*",
+    "leafs/fs": "*"
   },
   "scripts": {
     "test": "./vendor/bin/alchemy setup --test",
