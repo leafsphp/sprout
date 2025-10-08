@@ -12,6 +12,8 @@ class App
         'commands' => [],
     ];
 
+    protected $eventListeners = [];
+
     public function __construct(array $config = [])
     {
         $this->config = $config;
@@ -94,6 +96,66 @@ class App
                 }
             }
         }
+    }
+
+    /**
+     * Register an event listener
+     * @param string $event The event name
+     * @param callable $listener The event listener callback
+     * @return void
+     */
+    public function on(string $event, callable $listener): void
+    {
+        if (!isset($this->eventListeners[$event])) {
+            $this->eventListeners[$event] = [];
+        }
+
+        $this->eventListeners[$event][] = $listener;
+    }
+
+    /**
+     * Emit an event to all registered listeners
+     * @param string $event The event name
+     * @param array $data Event data
+     * @return Event
+     */
+    public function emit(string $event, array $data = []): Event
+    {
+        $eventObject = new Event($event, $data);
+
+        if (!isset($this->eventListeners[$event])) {
+            return $eventObject;
+        }
+
+        foreach ($this->eventListeners[$event] as $listener) {
+            if ($eventObject->isPropagationStopped()) {
+                break;
+            }
+
+            call_user_func($listener, $eventObject);
+        }
+
+        return $eventObject;
+    }
+
+    /**
+     * Remove event listeners for a specific event
+     * @param string $event The event name
+     * @return void
+     */
+    public function off(string $event): void
+    {
+        unset($this->eventListeners[$event]);
+    }
+
+    /**
+     * Check if an event has any listeners
+     * @param string $event The event name
+     * @return bool
+     */
+    public function hasListeners(string $event): bool
+    {
+        return isset($this->eventListeners[$event]) && !empty($this->eventListeners[$event]);
     }
 
     protected function normalizeCommandInput(string $input): array
@@ -182,8 +244,52 @@ class App
         }
 
         if (!isset($this->config['commands'][$commandName])) {
+            if ($this->hasListeners('command.notFound')) {
+                $event = $this->emit('command.notFound', [
+                    'commandName' => $commandName,
+                    'commandData' => $commandData,
+                    'argv' => $argv
+                ]);
+
+                if ($event->getExitCode() !== 0) {
+                    exit($event->getExitCode());
+                }
+
+                return;
+            }
+
             echo "Command not found\n";
             return;
+        }
+
+        $beforeEvent = $this->emit('command.before', [
+            'commandName' => $commandName,
+            'commandData' => $commandData,
+            'argv' => $argv
+        ]);
+
+        if ($beforeEvent->isPropagationStopped()) {
+            if ($beforeEvent->getExitCode() !== 0) {
+                exit($beforeEvent->getExitCode());
+            }
+
+            return;
+        }
+
+        if ($this->hasListeners($commandName)) {
+            $customEvent = $this->emit($commandName, [
+                'commandName' => $commandName,
+                'commandData' => $commandData,
+                'argv' => $argv
+            ]);
+
+            if ($customEvent->isPropagationStopped()) {
+                if ($customEvent->getExitCode() !== 0) {
+                    exit($customEvent->getExitCode());
+                }
+
+                return;
+            }
         }
 
         $command = $this->config['commands'][$commandName]['handler'];
@@ -219,7 +325,18 @@ class App
             return;
         }
 
-        return $command->call($command);
+        $result = $command->call($command);
+
+        $this->emit('command.after', [
+            'commandName' => $commandName,
+            'commandData' => $commandData,
+            'params' => $params,
+            'arguments' => $arguments,
+            'result' => $result,
+            'argv' => $argv
+        ]);
+
+        return $result;
     }
 
     protected function parseCommandSignature(string $signature)
