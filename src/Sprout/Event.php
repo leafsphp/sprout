@@ -112,4 +112,12 @@ class Event
     {
         return $this->data['commandData'] ?? [];
     }
+
+    /**
+     * Get command argv
+     */
+    public function getCommandArgv(): array
+    {
+        return $this->data['argv'] ?? [];
+    }
 }
