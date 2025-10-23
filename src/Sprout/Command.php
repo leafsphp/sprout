@@ -36,7 +36,7 @@ class Command
             }
         }
 
-        return $this->arguments[$argument] ?? null;
+        return $this->arguments[$argument] ?? $this->help['arguments'][$argument]['default'];
     }
 
     /**
