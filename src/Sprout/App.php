@@ -88,7 +88,6 @@ class App
             foreach ($commandFiles as $file) {
                 if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
                     $className = pathinfo($file, PATHINFO_FILENAME);
-
                     $fullClassName = trim("App\\Console\\$className", '\\');
 
                     if (class_exists($fullClassName)) {
