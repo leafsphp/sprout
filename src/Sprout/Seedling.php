@@ -5,7 +5,7 @@ namespace Leaf\Sprout;
 /**
  * Seedling
  * ----
- * Utils for sseedling framework
+ * Utils for seedling framework
  */
 class Seedling
 {
