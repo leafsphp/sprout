@@ -88,7 +88,13 @@ class App
             foreach ($commandFiles as $file) {
                 if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
                     $className = pathinfo($file, PATHINFO_FILENAME);
-                    $fullClassName = "App\\Commands\\$className";
+                    $relativePath = str_replace([getcwd(), '/'], ['', '\\'], $path);
+                    $relativePath = implode('\\', array_map(
+                        'ucfirst',
+                        explode('\\', trim($relativePath, '\\')))
+                    );
+
+                    $fullClassName = trim("$relativePath\\$className", '\\');
 
                     if (class_exists($fullClassName)) {
                         $this->register(new $fullClassName());
