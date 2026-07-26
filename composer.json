@@ -1,54 +1,59 @@
 {
-  "name": "leafs/sprout",
-  "description": "Fast, lightweight and minimal CLI framework for PHP",
-  "keywords": [
-    "microframework",
-    "CLI",
-    "console",
-    "leaf",
-    "php",
-    "framework"
-  ],
-  "homepage": "https://leafphp.dev",
-  "type": "library",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Michael Darko",
-      "email": "mickdd22@gmail.com",
-      "homepage": "https://mychi.netlify.app",
-      "role": "Developer"
-    }
-  ],
-  "autoload": {
-    "psr-4": {
-      "Leaf\\": "src"
+    "name": "leafs/sprout",
+    "description": "Fast, lightweight and minimal CLI framework for PHP",
+    "keywords": [
+        "microframework",
+        "CLI",
+        "console",
+        "leaf",
+        "php",
+        "framework"
+    ],
+    "homepage": "https://leafphp.dev",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Michael Darko",
+            "email": "mickdd22@gmail.com",
+            "homepage": "https://mychi.netlify.app",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Leaf\\": "src"
+        },
+        "files": [
+            "src/functions.php"
+        ]
     },
-    "files": [
-      "src/functions.php"
-    ]
-  },
-  "minimum-stability": "dev",
-  "prefer-stable": true,
-  "require": {
-    "php": "^7.4|^8.0",
-    "symfony/process": "*",
-    "leafs/fs": "*"
-  },
-  "scripts": {
-    "test": "./vendor/bin/alchemy setup --test",
-    "alchemy": "./vendor/bin/alchemy setup",
-    "lint": "./vendor/bin/alchemy setup --lint",
-    "actions": "./vendor/bin/alchemy setup --actions"
-  },
-  "config": {
-    "allow-plugins": {
-      "pestphp/pest-plugin": true
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "^7.4|^8.0",
+        "symfony/process": "*",
+        "leafs/fs": "*"
+    },
+    "scripts": {
+        "test": "./vendor/bin/alchemy setup --test",
+        "alchemy": "./vendor/bin/alchemy setup",
+        "lint": "./vendor/bin/alchemy setup --lint",
+        "actions": "./vendor/bin/alchemy setup --actions"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "pestphp/pest": "*",
+        "leafs/alchemy": "^4.0"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-v5.x": "5.0.x-dev"
+        }
     }
-  },
-  "require-dev": {
-    "friendsofphp/php-cs-fixer": "^3.64",
-    "pestphp/pest": "*",
-    "leafs/alchemy": "^4.0"
-  }
 }
