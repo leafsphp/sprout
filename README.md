@@ -52,6 +52,12 @@ You can then run your CLI app using the PHP CLI:
 php my-cli-app greet
 ```
 
+`run()` exits the process with the exit code of the command that was run, so failures propagate to your shell or CI. If you want to handle the exit code yourself (in tests or wrappers), pass `false` and `run()` will return the exit code instead of exiting:
+
+```php
+$exitCode = $app->run(false);
+```
+
 ## Writing Commands
 
 You can write your commands in a functional way using the `command()` method on the app instance, or you can create a class that extends the `Leaf\Sprout\Command` class. Here's an example of a command written as a class:

@@ -225,9 +225,26 @@ class App
 
     /**
      * Run your sprout app
-     * @return void
+     * @param bool $exit Whether to exit the process with the command's exit code.
+     *  Pass false to have run() return the exit code instead.
+     * @return int The command's exit code (only returned when $exit is false)
      */
-    public function run()
+    public function run(bool $exit = true): int
+    {
+        $exitCode = $this->dispatch();
+
+        if ($exit) {
+            exit($exitCode);
+        }
+
+        return $exitCode;
+    }
+
+    /**
+     * Dispatch the current command and return its exit code
+     * @return int The command's exit code
+     */
+    protected function dispatch(): int
     {
         $params = [];
         $arguments = [];
@@ -240,7 +257,7 @@ class App
 
         if ($commandName === '' || $commandName === 'list') {
             $this->renderListView();
-            return;
+            return 0;
         }
 
         if (!isset($this->config['commands'][$commandName])) {
@@ -251,15 +268,11 @@ class App
                     'argv' => $argv
                 ]);
 
-                if ($event->getExitCode() !== 0) {
-                    exit($event->getExitCode());
-                }
-
-                return;
+                return $event->getExitCode();
             }
 
             echo "Command not found\n";
-            return;
+            return 1;
         }
 
         $beforeEvent = $this->emit('command.before', [
@@ -269,11 +282,7 @@ class App
         ]);
 
         if ($beforeEvent->isPropagationStopped()) {
-            if ($beforeEvent->getExitCode() !== 0) {
-                exit($beforeEvent->getExitCode());
-            }
-
-            return;
+            return $beforeEvent->getExitCode();
         }
 
         if ($this->hasListeners($commandName)) {
@@ -284,11 +293,7 @@ class App
             ]);
 
             if ($customEvent->isPropagationStopped()) {
-                if ($customEvent->getExitCode() !== 0) {
-                    exit($customEvent->getExitCode());
-                }
-
-                return;
+                return $customEvent->getExitCode();
             }
         }
 
@@ -303,7 +308,8 @@ class App
                 $paramData['default'] ?? null;
 
             if ($paramData['optional'] === false && $params[$paramData['long']] === null) {
-                die("Argument --{$paramData['long']} is required\n");
+                echo "Argument --{$paramData['long']} is required\n";
+                return 1;
             }
         }
 
@@ -322,7 +328,7 @@ class App
         if (in_array('--help', $argv) || in_array('-h', $argv)) {
             $this->renderHelpView($command);
 
-            return;
+            return 0;
         }
 
         $result = $command->call($command);
