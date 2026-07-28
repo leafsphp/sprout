@@ -20,7 +20,7 @@ class Command
 
     public function __construct()
     {
-        // 
+        //
     }
 
     /**
@@ -230,8 +230,14 @@ class Command
         $this->validateCommandArguments($this->help['params'], $this->params);
         $this->validateCommandArguments($this->help['arguments'], $this->arguments);
 
-        return $this->handler
-            ? call_user_func($this->handler, $command)
+        $handler = $this->handler;
+
+        if ($handler instanceof \Closure) {
+            $handler = \Closure::bind($handler, $command, static::class);
+        }
+
+        return $handler
+            ? call_user_func($handler, $command)
             : $this->handle($command);
     }
 }
