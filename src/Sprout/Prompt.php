@@ -50,6 +50,7 @@ class Prompt
 
             if ($prompt['type'] === null) {
                 $this->cursor++;
+
                 continue;
             }
 
@@ -76,6 +77,7 @@ class Prompt
 
             if ($answer === null) {
                 $this->onError();
+
                 return [];
             }
 
@@ -99,11 +101,13 @@ class Prompt
 
         if ($prompt['type'] === 'select') {
             $this->renderSelectPrompt($prompt, $rerender);
+
             return;
         }
 
         if ($prompt['type'] === 'confirm') {
             $this->renderConfirmPrompt($prompt, $rerender);
+
             return;
         }
 
@@ -113,6 +117,7 @@ class Prompt
     protected function getAnswer($prompt)
     {
         $stdin = fopen('php://stdin', 'r');
+        $atEof = false;
 
         if (!$this->isWindows) {
             stream_set_blocking($stdin, false);
@@ -122,33 +127,75 @@ class Prompt
         while (1) {
             $keyPress = $this->isWindows ? $this->readWindowsInput() : fgets($stdin);
 
+            if (!$this->isWindows) {
+                if ($keyPress === false || $keyPress === '') {
+                    if (feof($stdin)) {
+                        $atEof = true;
+                        $keyPress = "\n";
+                    } else {
+                        usleep(10000);
+
+                        continue;
+                    }
+                } elseif (strlen($keyPress) > 1 && $keyPress[0] !== "\033") {
+                    $line = rtrim($keyPress, "\r\n");
+
+                    if ($line !== '') {
+                        $this->currentInput .= $line;
+                    }
+
+                    if ($line === $keyPress) {
+                        continue;
+                    }
+
+                    $keyPress = "\n";
+                }
+            }
+
             if ($keyPress || is_numeric($keyPress)) {
                 if ($keyPress === "\n" || $keyPress === "\r" || ($prompt['type'] === 'select' && is_numeric($keyPress))) {
                     if ($prompt['type'] === 'select') {
-                        $this->answers[$this->cursor] = ($this->isWindows)
-                            ? $prompt['choices'][(int) $keyPress]['value']
-                            : $prompt['choices'][$this->currentSelection]['value'];
+                        $typedChoice = trim($this->currentInput);
+
+                        if (is_numeric($typedChoice)) {
+                            $selection = (int) $typedChoice;
+                        } elseif ($this->isWindows && is_numeric($keyPress)) {
+                            $selection = (int) $keyPress;
+                        } else {
+                            $selection = $this->currentSelection;
+                        }
+
+                        $this->answers[$this->cursor] = $prompt['choices'][$selection]['value']
+                            ?? $prompt['choices'][$this->currentSelection]['value'];
 
                         $this->currentSelection = 0;
+                        $this->currentInput = '';
                     } elseif ($prompt['type'] === 'text') {
                         if ($this->currentInput === '') {
-                            // if (isset($prompt['validate']) && is_callable($prompt['validate'])) {
-                            //     $validation = $prompt['validate']($this->currentInput, $this->answers);
-
-                            //     if ($validation !== true) {
-                            //         echo ($validation);
-                            //         $this->renderPrompt($this->questions[$this->cursor], false);
-                            //         continue;
-                            //     }
-                            // }
-
                             $this->currentInput = $prompt['default'] ?? '';
+                        }
+
+                        if (isset($prompt['validate']) && is_callable($prompt['validate'])) {
+                            $validation = $prompt['validate']($this->currentInput, $this->answers);
+
+                            if ($validation !== true && !$atEof) {
+                                sprout()->style()->write(PHP_EOL . "\033[31m$validation\033[0m" . PHP_EOL);
+                                $this->currentInput = '';
+                                $this->renderPrompt($this->questions[$this->cursor], false);
+
+                                continue;
+                            }
                         }
 
                         $this->answers[$this->cursor] = $this->currentInput;
                         $this->currentInput = '';
                     } elseif ($prompt['type'] === 'confirm') {
-                        $this->answers[$this->cursor] = $prompt['default'] ?? false;
+                        $typed = strtolower(trim($this->currentInput));
+
+                        $this->answers[$this->cursor] = $typed === 'y' || $typed === 'yes'
+                            ? true
+                            : ($typed === 'n' || $typed === 'no' ? false : ($prompt['default'] ?? false));
+
                         $this->currentInput = '';
                     }
 
@@ -159,12 +206,12 @@ class Prompt
                     break;
                 } elseif ($keyPress === "\t") {
                     continue;
-                } elseif ($keyPress === "\033[A" || $keyPress === "UP") {
+                } elseif ($keyPress === "\033[A" || $keyPress === 'UP') {
                     if ($prompt['type'] === 'select') {
                         $this->currentSelection = $this->currentSelection === 0 ? count($prompt['choices']) - 1 : $this->currentSelection - 1;
                         $this->renderPrompt($this->questions[$this->cursor], false);
                     }
-                } elseif ($keyPress === "\033[B" || $keyPress === "DOWN") {
+                } elseif ($keyPress === "\033[B" || $keyPress === 'DOWN') {
                     if ($prompt['type'] === 'select') {
                         $this->currentSelection = $this->currentSelection === count($prompt['choices']) - 1 ? 0 : $this->currentSelection + 1;
                         $this->renderPrompt($this->questions[$this->cursor], false);
@@ -173,7 +220,7 @@ class Prompt
                     // right
                 } elseif ($keyPress === "\033[D") {
                     // left
-                } elseif ($keyPress === "\177" || $keyPress === "BACKSPACE") {
+                } elseif ($keyPress === "\177" || $keyPress === 'BACKSPACE') {
                     if ($this->currentInput !== '') {
                         $this->currentInput = substr($this->currentInput, 0, -1);
                         $this->renderPrompt($this->questions[$this->cursor], $this->currentInput !== '');
@@ -188,6 +235,7 @@ class Prompt
                             $this->questions[$this->cursor]['answered'] = true;
                             $this->renderPrompt($this->questions[$this->cursor]);
                             $this->cursor++;
+
                             break;
                         }
 
@@ -298,24 +346,24 @@ class Prompt
         // Windows does not support raw stdin reading like Unix, so we use `readline()`
         $char = trim(readline());
 
-        if ($char === "") {
+        if ($char === '') {
             return "\n"; // Simulate Enter key
         }
 
         if ($char === "\x08") { // Backspace
-            return "BACKSPACE";
+            return 'BACKSPACE';
         }
 
         if ($char === "\xe0") { // Special key indicator (arrows)
             $arrow = fread(STDIN, 1);
 
             switch ($arrow) {
-                case "H":
-                    return "UP";
-                case "P":
-                    return "DOWN";
+                case 'H':
+                    return 'UP';
+                case 'P':
+                    return 'DOWN';
                 default:
-                    return "";
+                    return '';
             }
         }
 
@@ -324,11 +372,12 @@ class Prompt
 
     protected function readKey()
     {
-        system("stty -echo"); // Disable terminal echo
-        system("stty cbreak"); // Disable line buffering
+        system('stty -echo'); // Disable terminal echo
+        system('stty cbreak'); // Disable line buffering
         $key = fread(STDIN, 1);
-        system("stty echo"); // Re-enable terminal echo
-        system("stty -cbreak"); // Restore line buffering
+        system('stty echo'); // Re-enable terminal echo
+        system('stty -cbreak'); // Restore line buffering
+
         return $key;
     }
 }
