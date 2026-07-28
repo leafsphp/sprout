@@ -16,6 +16,7 @@ class GenerateConsoleCommand extends Command
 
         if (file_exists($commandFile = getcwd() . DIRECTORY_SEPARATOR . "app/console/$className.php")) {
             $this->error("$className already exists!");
+
             return 1;
         }
 
