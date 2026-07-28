@@ -35,6 +35,7 @@ class Process
     public function onError(callable $errorHandler): Process
     {
         $this->errorHandler = $errorHandler;
+
         return $this;
     }
 

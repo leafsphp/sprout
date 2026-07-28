@@ -18,7 +18,7 @@ class Style
 
     public function build(): string
     {
-        return "";
+        return '';
     }
 
     /**

@@ -74,7 +74,7 @@ class Sprout
             'type' => 'confirm',
             'name' => 'confirmation',
             'message' => $message,
-            'default' => $default
+            'default' => $default,
         ]);
     }
 

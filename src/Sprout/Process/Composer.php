@@ -61,6 +61,7 @@ class Composer
     public function version(): ?string
     {
         $json = $this->json();
+
         return $json['version'] ?? null;
     }
 
@@ -104,7 +105,7 @@ class Composer
     public function install($package = null, $callback = null): Process
     {
         $installCommand = $this->global ? 'global require' : 'require';
-        $process = new Process($package ? "composer $installCommand $package --ansi" : "composer install --ansi");
+        $process = new Process($package ? "composer $installCommand $package --ansi" : 'composer install --ansi');
         $process->setTimeout(null);
         $process->run($callback);
 

@@ -59,7 +59,7 @@ class App
         $commandOptions = $this->parseCommandSignature($command->getSignature());
 
         if ($commandOptions === null) {
-            throw new \Exception("Invalid command signature: " . json_encode(get_class($command)));
+            throw new \Exception('Invalid command signature: ' . json_encode(get_class($command)));
         }
 
         $command->setHelp($commandOptions['help']);
@@ -68,7 +68,6 @@ class App
             'signature' => $command->getSignature(),
             'params' => $commandOptions['params'],
             'arguments' => $commandOptions['arguments'],
-            'parsedSignature' => $commandOptions['parsed'],
             'handler' => $command,
         ];
 
@@ -158,13 +157,16 @@ class App
         return isset($this->eventListeners[$event]) && !empty($this->eventListeners[$event]);
     }
 
-    protected function normalizeCommandInput(string $input): array
+    protected function normalizeCommandInput(array $tokens): array
     {
-        $tokens = preg_split('/\s+/', trim($input));
+        $tokens = array_values(array_filter($tokens, function ($token) {
+            return $token !== '';
+        }));
+
         $result = [
             'command' => null,
             'args' => [],
-            'options' => []
+            'options' => [],
         ];
 
         $i = 0;
@@ -252,11 +254,11 @@ class App
         $argv = (array) $_SERVER['argv'];
 
         $commandName = $argv[1] ?? '';
-        $commandString = join(' ', array_slice($argv, 1));
-        $commandData = $this->normalizeCommandInput($commandString);
+        $commandData = $this->normalizeCommandInput(array_slice($argv, 1));
 
         if ($commandName === '' || $commandName === 'list') {
             $this->renderListView();
+
             return 0;
         }
 
@@ -265,20 +267,21 @@ class App
                 $event = $this->emit('command.notFound', [
                     'commandName' => $commandName,
                     'commandData' => $commandData,
-                    'argv' => $argv
+                    'argv' => $argv,
                 ]);
 
                 return $event->getExitCode();
             }
 
             echo "Command not found\n";
+
             return 1;
         }
 
         $beforeEvent = $this->emit('command.before', [
             'commandName' => $commandName,
             'commandData' => $commandData,
-            'argv' => $argv
+            'argv' => $argv,
         ]);
 
         if ($beforeEvent->isPropagationStopped()) {
@@ -289,7 +292,7 @@ class App
             $customEvent = $this->emit($commandName, [
                 'commandName' => $commandName,
                 'commandData' => $commandData,
-                'argv' => $argv
+                'argv' => $argv,
             ]);
 
             if ($customEvent->isPropagationStopped()) {
@@ -308,7 +311,8 @@ class App
                 $paramData['default'] ?? null;
 
             if ($paramData['optional'] === false && $params[$paramData['long']] === null) {
-                echo "Argument --{$paramData['long']} is required\n";
+                echo "Option --{$paramData['long']} is required\n";
+
                 return 1;
             }
         }
@@ -316,6 +320,7 @@ class App
         foreach ($this->config['commands'][$commandName]['arguments'] as $index => $arg) {
             if (($command->getHelp()['arguments'][$arg]['type'] ?? null) === 'array') {
                 $arguments[$arg] = array_slice($commandData['args'], $index);
+
                 break;
             }
 
@@ -339,7 +344,7 @@ class App
             'params' => $params,
             'arguments' => $arguments,
             'result' => $result,
-            'argv' => $argv
+            'argv' => $argv,
         ]);
 
         return $result;
@@ -360,7 +365,6 @@ class App
 
         return [
             'name' => $name,
-            'parsed' => ArgvParser::parseCommandSignature($signature),
             'params' => array_keys($params),
             'arguments' => array_keys($arguments),
             'help' => [
@@ -424,6 +428,11 @@ class App
                 } else {
                     $parsed['long'] = $parts[0];
                 }
+
+                if ($parsed['default'] === null && !$parsed['requiresValue']) {
+                    $parsed['default'] = false;
+                    $parsed['optional'] = true;
+                }
             }
 
             $return[$tokenName] = $parsed;
@@ -449,6 +458,7 @@ class App
         foreach ($groups as $namespace => &$commands) {
             ksort($commands);
         }
+        unset($commands); // break the reference — reusing $commands below would corrupt the last group
 
         $output = <<<HELP
 {$this->config['name']} {$this->config['version']}
