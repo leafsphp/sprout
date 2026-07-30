@@ -26,6 +26,35 @@ class GreetCommand extends Command
     }
 }
 
+class DashedCommand extends Command
+{
+    // https://github.com/leafsphp/leaf/issues/329 — dashes in command names
+    protected $signature = 'auto-create-reports
+        {name? : Report name}
+        {--dry-run : Preview without writing}';
+    protected $description = 'Command with dashes, like Aloe allowed';
+
+    protected function handle(): int
+    {
+        $this->info('report: ' . ($this->argument('name') ?? 'default') . ($this->option('dry-run') ? ' (dry)' : ''));
+
+        return 0;
+    }
+}
+
+class NamespacedDashCommand extends Command
+{
+    protected $signature = 'reports:auto-create';
+    protected $description = 'Dashes and namespaces together';
+
+    protected function handle(): int
+    {
+        $this->info('namespaced dash ok');
+
+        return 0;
+    }
+}
+
 class OptionalArgCommand extends Command
 {
     protected $signature = 'shout {name?}';

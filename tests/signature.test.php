@@ -68,3 +68,25 @@ test('boolean flags default to falsy when not passed', function () {
     expect($result['code'])->toBe(0)
         ->and($result['output'])->toContain('gentle');
 });
+
+test('command names can contain dashes', function () {
+    // https://github.com/leafsphp/leaf/issues/329
+    $result = runSprout(sproutApp([DashedCommand::class]), ['auto-create-reports', 'weekly']);
+
+    expect($result['code'])->toBe(0)
+        ->and($result['output'])->toContain('report: weekly');
+});
+
+test('dashed command names work with flag options', function () {
+    $result = runSprout(sproutApp([DashedCommand::class]), ['auto-create-reports', '--dry-run']);
+
+    expect($result['code'])->toBe(0)
+        ->and($result['output'])->toContain('report: default (dry)');
+});
+
+test('dashes and namespaces combine in command names', function () {
+    $result = runSprout(sproutApp([NamespacedDashCommand::class]), ['reports:auto-create']);
+
+    expect($result['code'])->toBe(0)
+        ->and($result['output'])->toContain('namespaced dash ok');
+});
