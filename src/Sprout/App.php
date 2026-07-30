@@ -352,7 +352,7 @@ class App
 
     protected function parseCommandSignature(string $signature)
     {
-        if (!preg_match('/^([\w:]+)(.*?)((?:\{\s*--.*\})+)?$/s', $signature, $matches)) {
+        if (!preg_match('/^([\w:-]+)(.*?)((?:\{\s*--.*\})+)?$/s', $signature, $matches)) {
             return null;
         }
 
