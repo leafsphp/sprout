@@ -12,7 +12,10 @@ class DeleteConsoleCommand extends Command
 
     protected function handle()
     {
-        $command = $this->studly($this->argument('file'));
+        $command = implode('', array_map(
+            fn ($part) => $this->studly($part),
+            explode(':', $this->argument('file'))
+        ));
 
         if (!strpos($command, 'Command')) {
             $command .= 'Command';
