@@ -69,6 +69,34 @@ test('boolean flags default to falsy when not passed', function () {
         ->and($result['output'])->toContain('gentle');
 });
 
+test('flags do not swallow the argument after them', function () {
+    $result = runSprout(sproutApp([ShortOptionCommand::class]), ['clean', '-f']);
+
+    expect($result['output'])->toContain('forced');
+
+    // a flag written before an argument leaves the argument alone
+    $result = runSprout(sproutApp([FlagWithDefaultCommand::class]), ['add', '--dev', 'alchemy']);
+
+    expect($result['code'])->toBe(0)
+        ->and($result['output'])->toContain('alchemy dev:true');
+});
+
+test('a flag declared with a default still reads as a boolean', function () {
+    $app = sproutApp([FlagWithDefaultCommand::class]);
+
+    expect(runSprout($app, ['add', 'alchemy'])['output'])->toContain('dev:false');
+    expect(runSprout($app, ['add', 'alchemy', '--dev'])['output'])->toContain('dev:true');
+    expect(runSprout($app, ['add', 'alchemy', '-d'])['output'])->toContain('dev:true');
+    expect(runSprout($app, ['add', 'alchemy', '--dev=false'])['output'])->toContain('dev:false');
+});
+
+test('value options still take the token after them', function () {
+    $result = runSprout(sproutApp([GreetCommand::class]), ['greet', '--greeting', 'Yo', 'Mika']);
+
+    expect($result['code'])->toBe(0)
+        ->and($result['output'])->toContain('Yo, Mika!');
+});
+
 test('command names can contain dashes', function () {
     // https://github.com/leafsphp/leaf/issues/329
     $result = runSprout(sproutApp([DashedCommand::class]), ['auto-create-reports', 'weekly']);

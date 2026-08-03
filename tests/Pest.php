@@ -108,6 +108,26 @@ class ShortOptionCommand extends Command
     }
 }
 
+class FlagWithDefaultCommand extends Command
+{
+    // {--d|dev=false} is a flag with a default, not an option whose value
+    // is the string "false"
+    protected $signature = 'add {packages*} {--d|dev=false : Install as a dev dependency}';
+    protected $description = 'Add packages';
+
+    protected function handle(): int
+    {
+        $dev = $this->option('dev');
+
+        $this->write(
+            implode('+', $this->argument('packages')) .
+            ' dev:' . var_export($dev, true)
+        );
+
+        return 0;
+    }
+}
+
 class FailingCommand extends Command
 {
     protected $signature = 'fail:hard';

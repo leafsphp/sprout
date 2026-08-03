@@ -89,3 +89,26 @@ PHP;
     expect($result['code'])->toBe(0)
         ->and($result['output'])->toContain('done:');
 })->skipOnWindows();
+
+test('seedling g:command and d:command agree on namespaced names', function () {
+    $sandbox = sys_get_temp_dir() . '/sprout-seedling-' . substr(str_shuffle('abcdefghijklmnop'), 0, 8);
+    mkdir("$sandbox/app/console", 0777, true);
+    $cwd = getcwd();
+    chdir($sandbox);
+
+    try {
+        $app = sproutApp([\Leaf\Sprout\Seedling\GenerateConsoleCommand::class, \Leaf\Sprout\Seedling\DeleteConsoleCommand::class]);
+
+        // generate: deploy:site -> DeploySiteCommand
+        expect(runSprout($app, ['g:command', 'deploy:site'])['code'])->toBe(0);
+        expect(file_exists("$sandbox/app/console/DeploySiteCommand.php"))->toBeTrue();
+
+        // delete must map the SAME name back (regression: it used to look
+        // for Deploy:siteCommand and fail)
+        expect(runSprout($app, ['d:command', 'deploy:site'])['code'])->toBe(0);
+        expect(file_exists("$sandbox/app/console/DeploySiteCommand.php"))->toBeFalse();
+    } finally {
+        chdir($cwd);
+        exec('rm -rf ' . escapeshellarg($sandbox));
+    }
+});
