@@ -157,11 +157,29 @@ class App
         return isset($this->eventListeners[$event]) && !empty($this->eventListeners[$event]);
     }
 
-    protected function normalizeCommandInput(array $tokens): array
+    /**
+     * Turn raw argv tokens into a command, its arguments and its options.
+     *
+     * @param array $tokens The argv slice to parse
+     * @param array|null $valueOptions Map of option name (long and short) to
+     *  whether it collects an array of values. Options outside this map are
+     *  flags, so the token after them stays an argument instead of being
+     *  swallowed as their value. Null means the command is unknown, so every
+     *  option greedily takes whatever follows it.
+     */
+    protected function normalizeCommandInput(array $tokens, ?array $valueOptions = null): array
     {
         $tokens = array_values(array_filter($tokens, function ($token) {
             return $token !== '';
         }));
+
+        $takesValue = function (string $name) use ($valueOptions) {
+            return $valueOptions === null || array_key_exists($name, $valueOptions);
+        };
+
+        $takesManyValues = function (string $name) use ($valueOptions) {
+            return $valueOptions === null || ($valueOptions[$name] ?? false);
+        };
 
         $result = [
             'command' => null,
@@ -185,12 +203,14 @@ class App
                 if (strpos($option, '=') !== false) {
                     [$name, $value] = explode('=', $option, 2);
                     $result['options'][$name] = strpos($value, ',') !== false ? explode(',', $value) : $value;
-                } elseif (isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
+                } elseif ($takesValue($option) && isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
                     // --option value
-                    $value = [];
-                    while (isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
+                    $value = [$tokens[++$i]];
+
+                    while ($takesManyValues($option) && isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
                         $value[] = $tokens[++$i];
                     }
+
                     $result['options'][$option] = count($value) === 1 ? $value[0] : $value;
                 } else {
                     // --option (boolean true)
@@ -203,7 +223,7 @@ class App
                 $flags = substr($token, 1);
 
                 // Handle -k value
-                if (strlen($flags) === 1 && isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
+                if (strlen($flags) === 1 && $takesValue($flags) && isset($tokens[$i + 1]) && strpos($tokens[$i + 1], '-') !== 0) {
                     $result['options'][$flags] = $tokens[++$i];
                 } else {
                     // Handle -abc => a=true, b=true, c=true
@@ -254,7 +274,12 @@ class App
         $argv = (array) $_SERVER['argv'];
 
         $commandName = $argv[1] ?? '';
-        $commandData = $this->normalizeCommandInput(array_slice($argv, 1));
+        $commandData = $this->normalizeCommandInput(
+            array_slice($argv, 1),
+            isset($this->config['commands'][$commandName])
+                ? $this->valueOptions($this->config['commands'][$commandName]['handler'])
+                : null
+        );
 
         if ($commandName === '' || $commandName === 'list') {
             $this->renderListView();
@@ -310,6 +335,16 @@ class App
                 ($commandData['options'][$paramData['long']] ?? $commandData['options'][$paramData['short']] ?? null) :
                 $paramData['default'] ?? null;
 
+            // flags always hand back a bool, so --force, --force=false and an
+            // absent flag can all be checked the same way
+            if (is_bool($paramData['default']) && !$paramData['requiresValue']) {
+                $params[$paramData['long']] = !in_array(
+                    $params[$paramData['long']],
+                    [false, 'false', '0', 0, '', null],
+                    true
+                );
+            }
+
             if ($paramData['optional'] === false && $params[$paramData['long']] === null) {
                 echo "Option --{$paramData['long']} is required\n";
 
@@ -348,6 +383,31 @@ class App
         ]);
 
         return $result;
+    }
+
+    /**
+     * The options on a command that take a value, keyed by name (long and
+     * short) with whether they collect an array. Everything else is a flag.
+     *
+     * @param Command $command The command to read declared options from
+     */
+    protected function valueOptions(Command $command): array
+    {
+        $options = [];
+
+        foreach ($command->getHelp()['params'] as $paramData) {
+            if (is_bool($paramData['default']) && !$paramData['requiresValue']) {
+                continue;
+            }
+
+            foreach ([$paramData['long'], $paramData['short']] as $name) {
+                if ($name !== null) {
+                    $options[$name] = ($paramData['type'] ?? 'string') === 'array';
+                }
+            }
+        }
+
+        return $options;
     }
 
     protected function parseCommandSignature(string $signature)
@@ -432,6 +492,12 @@ class App
                 if ($parsed['default'] === null && !$parsed['requiresValue']) {
                     $parsed['default'] = false;
                     $parsed['optional'] = true;
+                }
+
+                // {--d|dev=false} declares a flag with a default, not an
+                // option whose value is the word "false"
+                if ($parsed['default'] === 'true' || $parsed['default'] === 'false') {
+                    $parsed['default'] = $parsed['default'] === 'true';
                 }
             }
 
