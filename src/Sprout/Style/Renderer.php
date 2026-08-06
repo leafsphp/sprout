@@ -9,6 +9,8 @@ class Renderer
     protected static array $styleTagMap = [
         'error' => "\033[1;37;41m",
         'info' => "\033[1;34m",
+        'success' => "\033[1;32m",
+        'warning' => "\033[30;43m",
         'comment' => "\033[1;33m",
         'question' => "\033[30;46m",
         'b' => "\033[1m",

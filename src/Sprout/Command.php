@@ -104,6 +104,22 @@ class Command
     }
 
     /**
+     * Output some data as a success message
+     */
+    public function success($messages)
+    {
+        return $this->writeln("<success>$messages</success>");
+    }
+
+    /**
+     * Output some data as a warning
+     */
+    public function warning($messages)
+    {
+        return $this->writeln("<warning>$messages</warning>");
+    }
+
+    /**
      * Output some data as a question
      */
     public function question($messages)
