@@ -287,6 +287,12 @@ class App
             return 0;
         }
 
+        if ($commandName === '--version' || $commandName === '-V') {
+            echo trim((string) $this->config['version']) . "\n";
+
+            return 0;
+        }
+
         if (!isset($this->config['commands'][$commandName])) {
             if ($this->hasListeners('command.notFound')) {
                 $event = $this->emit('command.notFound', [
@@ -526,8 +532,14 @@ class App
         }
         unset($commands); // break the reference — reusing $commands below would corrupt the last group
 
+        // apps that bake the version into their banner (ascii art with the
+        // version in a corner) should not get it printed a second time
+        $version = strpos((string) $this->config['name'], (string) $this->config['version']) !== false
+            ? ''
+            : $this->config['version'];
+
         $output = <<<HELP
-{$this->config['name']} {$this->config['version']}
+{$this->config['name']} {$version}
 
 Usage:
   command [options] [arguments]
