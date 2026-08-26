@@ -94,7 +94,19 @@ class Composer
      */
     public function hasDependency($package): bool
     {
-        return $this->hasDependencies() && (strpos(json_encode($this->lock()), "\"name\": \"$package\"") !== false);
+        if (!$this->hasDependencies()) {
+            return false;
+        }
+
+        $lock = $this->lock();
+
+        foreach (array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []) as $installed) {
+            if (($installed['name'] ?? null) === $package) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -106,6 +118,21 @@ class Composer
     {
         $installCommand = $this->global ? 'global require' : 'require';
         $process = new Process($package ? "composer $installCommand $package --ansi" : 'composer install --ansi');
+        $process->setTimeout(null);
+        $process->run($callback);
+
+        return $process;
+    }
+
+    /**
+     * Install a composer package as a dev dependency
+     * @param string|array $package The package to install
+     * @param callable|null $callback A callback to run after installation
+     */
+    public function installDev($package, $callback = null): Process
+    {
+        $installCommand = $this->global ? 'global require' : 'require';
+        $process = new Process("composer $installCommand $package --dev --ansi");
         $process->setTimeout(null);
         $process->run($callback);
 
