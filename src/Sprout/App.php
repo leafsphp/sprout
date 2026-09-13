@@ -334,12 +334,13 @@ class App
         $command = $this->config['commands'][$commandName]['handler'];
 
         foreach (array_values($command->getHelp()['params']) as $paramData) {
-            $params[$paramData['long']] = (
-                isset($commandData['options'][$paramData['long']]) ||
-                isset($commandData['options'][$paramData['short']])
-            ) ?
-                ($commandData['options'][$paramData['long']] ?? $commandData['options'][$paramData['short']] ?? null) :
-                $paramData['default'] ?? null;
+            $options = $commandData['options'] ?? [];
+            $long = $paramData['long'];
+            $short = $paramData['short'] ?? null;
+
+            $params[$long] = (isset($options[$long]) || ($short !== null && isset($options[$short])))
+                ? ($options[$long] ?? ($short !== null ? ($options[$short] ?? null) : null))
+                : $paramData['default'] ?? null;
 
             // flags always hand back a bool, so --force, --force=false and an
             // absent flag can all be checked the same way

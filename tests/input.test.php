@@ -43,3 +43,28 @@ test('comma separated option values become arrays', function () {
 
     expect($result['output'])->toContain('picked:apple|berry');
 });
+
+test('options without a short alias dispatch without deprecation notices', function () {
+    $app = sproutApp();
+    $app->command('install {--react} {--pages= : Pages to add}', function () {
+        echo 'react:' . ($this->option('react') ? 'yes' : 'no');
+
+        return 0;
+    });
+
+    $notices = [];
+    set_error_handler(function (int $severity, string $message) use (&$notices) {
+        $notices[] = $message;
+
+        return true;
+    }, E_DEPRECATED | E_USER_DEPRECATED);
+
+    try {
+        $result = runSprout($app, ['install', '--react']);
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($notices)->toBe([]);
+    expect($result['output'])->toContain('react:yes');
+});

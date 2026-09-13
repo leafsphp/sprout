@@ -231,12 +231,15 @@ class Command
     protected function validateCommandArguments(array $data, array &$dataPool)
     {
         foreach ($data as $key => $value) {
-            if (!$value['optional'] && (!isset($dataPool[$value['long']]) && !isset($dataPool[$key]))) {
+            $long = $value['long'] ?? null;
+            $passed = ($long !== null && isset($dataPool[$long])) || isset($dataPool[$key]);
+
+            if (!$value['optional'] && !$passed) {
                 throw new \Exception("Argument $key is required");
             }
 
-            if ($value['optional'] && (!isset($dataPool[$value['long']]) && !isset($dataPool[$key]))) {
-                $dataPool[$value['long']] = $value['default'];
+            if ($value['optional'] && !$passed) {
+                $dataPool[$long ?? $key] = $value['default'];
             }
         }
     }
