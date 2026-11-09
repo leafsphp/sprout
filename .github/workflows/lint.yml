@@ -4,6 +4,9 @@ name: Lint code
 
 on: ["push","pull_request"]
 
+env:
+  COMPOSER_ROOT_VERSION: 5.x-dev
+
 jobs:
   lint:
     runs-on: ubuntu-latest
