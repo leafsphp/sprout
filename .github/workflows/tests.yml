@@ -4,6 +4,9 @@ name: Run Tests
 
 on: ["push","pull_request"]
 
+env:
+  COMPOSER_ROOT_VERSION: 5.x-dev
+
 jobs:
   tests:
     runs-on: ${{ matrix.os }}
